@@ -1,0 +1,5 @@
+{
+  "name": "StreetSketch",
+  "description": "An application that transforms any address into a unique work of art. Using a Google Street View image, it removes clutter and redraws the scene in various artistic styles like watercolor, oil painting, or pencil sketch.",
+  "requestFramePermissions": []
+}

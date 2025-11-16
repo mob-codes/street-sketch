@@ -1,0 +1,10 @@
+# netlify.toml
+
+[build]
+  # This tells Netlify where your serverless functions are
+  functions = "netlify/functions"
+
+# NEW: Add this [dev] block
+[dev]
+  # Tell Netlify that your Vite server runs on port 3000
+  targetPort = 3000
