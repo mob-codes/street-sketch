@@ -1,4 +1,5 @@
 // src/App.tsx
+import './index.css'; // Make sure this is in src/main.tsx, not here
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
@@ -296,17 +297,19 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* UPDATED: Combined Step 2 & 3 */}
         {appStep === 'framing' && (
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
             
-            {/* UPDATED: New flex layout for controls */}
+            {/* === LAYOUT FIX === */}
+            {/* Use md:flex-row to put image/rotate and sliders side-by-side */}
             <div className="flex flex-col md:flex-row gap-6 justify-center">
 
-              {/* Image Container */}
-              <div className="flex-shrink">
-                <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden max-h-96">
+              {/* Column 1: Image and Rotate Slider */}
+              {/* This column will grow to fit image, rotate slider width matches */}
+              <div className="flex-1 flex flex-col gap-6 min-w-0">
+                {/* Image Container */}
+                <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
                   {originalImageUrl && (
                     <img 
                       src={originalImageUrl} 
@@ -325,10 +328,24 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Horizontal Rotate Slider (MOVED) */}
+                <div className="p-4 bg-white rounded-xl shadow-lg">
+                  <PovSlider 
+                    label="Rotate" 
+                    icon={<ArrowLeftRight className="w-4 h-4" />}
+                    value={heading} 
+                    onChange={setHeading} 
+                    min={0} 
+                    max={360}
+                    orientation="horizontal"
+                  />
+                </div>
               </div>
 
-              {/* Vertical Sliders Container */}
-              <div className="flex-shrink-0 flex flex-row md:flex-col justify-center items-start md:items-center gap-8 p-4 bg-white rounded-xl shadow-lg md:w-auto">
+              {/* Column 2: Vertical Sliders */}
+              {/* This column shrinks to fit content */}
+              <div className="flex-shrink-0 flex flex-row md:flex-col justify-center items-start gap-8 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-4 h-4" />}
@@ -349,19 +366,7 @@ const App: React.FC = () => {
                 />
               </div>
             </div>
-
-            {/* Horizontal Rotate Slider */}
-            <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
-              <PovSlider 
-                label="Rotate" 
-                icon={<ArrowLeftRight className="w-4 h-4" />}
-                value={heading} 
-                onChange={setHeading} 
-                min={0} 
-                max={360}
-                orientation="horizontal"
-              />
-            </div>
+            {/* === END OF LAYOUT FIX === */}
             
             {/* Step 3: Style Options */}
             <div className="mt-8 bg-white rounded-xl shadow-lg p-6 sm:p-8">
@@ -391,7 +396,7 @@ const App: React.FC = () => {
           <div className="flex flex-col items-center justify-center min-h-[300px] animate-fade-in">
             <LoadingSpinner 
               mainText="Generating your artwork..." 
-              subText="This should only take a few seconds"
+              subText="This may take up to 30 seconds"
               size="large" 
             />
           </div>
@@ -452,7 +457,6 @@ const App: React.FC = () => {
               />
             </div>
             
-            {/* UPDATED: More prominent buttons */}
             <div className="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
               <ActionButton
                 onClick={handleRecapture}

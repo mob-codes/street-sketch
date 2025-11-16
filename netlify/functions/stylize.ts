@@ -2,29 +2,37 @@
 import type { Handler } from "@netlify/functions";
 import { GoogleGenAI, Modality } from "@google/genai";
 
-// Helper function to fetch an image and convert it to base64
+// 
+// === THIS FUNCTION IS NOW FIXED FOR NODE.JS ===
+//
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
+  console.log('[stylize.ts] Fetching image for conversion:', url);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
   }
+
   const blob = await response.blob();
+  
+  // Simple 404 check
   if (blob.type === 'image/png' && blob.size < 20000) {
       throw new Error("404: No Street View imagery available for this location.");
   }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        const result = reader.result as string;
-        resolve({
-            base64: result.split(',')[1],
-            mimeType: blob.type
-        });
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+
+  // This is the Node.js way to convert a Blob (via ArrayBuffer) to a base64 string
+  const arrayBuffer = await blob.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const base64 = buffer.toString('base64');
+  
+  console.log('[stylize.ts] Image fetched and converted to base64.');
+  
+  return {
+    base64: base64,
+    mimeType: blob.type
+  };
 };
+// === END OF FIX ===
+//
 
 const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
