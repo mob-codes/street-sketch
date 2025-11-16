@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.1",
+    "@netlify/blobs": "^10.3.3",
     "lucide-react": "^0.553.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

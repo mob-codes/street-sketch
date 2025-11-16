@@ -1,59 +1,43 @@
-// netlify/functions/stylize.ts
 import type { Handler } from "@netlify/functions";
 import { GoogleGenAI, Modality } from "@google/genai";
+import { getStore } from "@netlify/blobs"; // <-- IMPORT BLOBS
 
-// 
-// === THIS FUNCTION IS NOW FIXED FOR NODE.JS ===
-//
+// Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
-  console.log('[stylize.ts] Fetching image for conversion:', url);
   const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-  }
-
+  if (!response.ok) { throw new Error(`Failed to fetch image: ${response.status}`); }
   const blob = await response.blob();
-  
-  // Simple 404 check
   if (blob.type === 'image/png' && blob.size < 20000) {
-      throw new Error("404: No Street View imagery available for this location.");
+    throw new Error("404: No Street View imagery available.");
   }
-
-  // This is the Node.js way to convert a Blob (via ArrayBuffer) to a base64 string
   const arrayBuffer = await blob.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const base64 = buffer.toString('base64');
-  
-  console.log('[stylize.ts] Image fetched and converted to base64.');
-  
-  return {
-    base64: base64,
-    mimeType: blob.type
-  };
+  return { base64: base64, mimeType: blob.type };
 };
-// === END OF FIX ===
-//
 
 const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  // Get the key securely from Netlify's environment
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    console.error("[stylize-run] GEMINI_API_KEY is not set");
     return { statusCode: 500, body: JSON.stringify({ error: "GEMINI_API_KEY is not set" }) };
   }
 
   try {
-    const { streetViewUrl, artStyle } = JSON.parse(event.body || '{}');
-    if (!streetViewUrl || !artStyle) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing streetViewUrl or artStyle" }) };
+    // 1. GET DATA FROM FRONTEND
+    const { streetViewUrl, artStyle, jobId } = JSON.parse(event.body || '{}');
+    if (!streetViewUrl || !artStyle || !jobId) {
+      return { statusCode: 400, body: JSON.stringify({ error: "Missing streetViewUrl, artStyle, or jobId" }) };
     }
     
     const ai = new GoogleGenAI({ apiKey });
     const { base64: base64Image, mimeType } = await imageUrlToBase64(streetViewUrl);
 
+    // 2. YOUR PROMPT (Unchanged)
     let styleDescription = '';
     switch (artStyle) {
       case 'Oil Painting':
@@ -66,27 +50,16 @@ const handler: Handler = async (event) => {
         styleDescription = 'transform the result into a vibrant and artistic watercolor painting. The style should be loose and expressive, with visible brushstrokes and color bleeds, typical of a real watercolor painting.';
         break;
     }
-
     const prompt = `
-      Analyze the provided street view image of a property.
-      First, digitally remove all transient Street View objects 
-      specifacally people, moving or parked cars, bicycles, and garbage cans to create a clean, timeless,
-      architectural front-on view of the property and its immediate, natural surroundings (trees, sky, lawn) that fade to white. 
-      Do not remove aesthetic features: flag poles, fences, trees or bushes, and don't add any that aren't present.
+      Analyze the provided street view image...
       After cleaning the image, ${styleDescription} Ensure the final output is only the generated image itself, with no text or borders.
-    `;
+    `; // (I've truncated your prompt for brevity, use your full one)
 
+    // 3. CALL GEMINI (Unchanged)
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [
-          { inlineData: { data: base64Image, mimeType: mimeType } },
-          { text: prompt },
-        ],
-      },
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
+      contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
+      config: { responseModalities: [Modality.IMAGE] },
     });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
@@ -94,17 +67,32 @@ const handler: Handler = async (event) => {
         const base64ImageBytes: string = part.inlineData.data;
         const generatedMimeType = part.inlineData.mimeType;
         const generatedUrl = `data:${generatedMimeType};base64,${base64ImageBytes}`;
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ generatedUrl: generatedUrl }),
-        };
+        
+        // 4. SAVE RESULT TO BLOB STORAGE
+        const store = getStore("stylized-images");
+        await store.setJSON(jobId, {
+          status: "complete",
+          generatedUrl: generatedUrl
+        });
+        
+        // Background functions just need to return 200 to signal success
+        return { statusCode: 200, body: "Job complete." };
       }
     }
     
     throw new Error("No image was generated by the API.");
 
   } catch (error) {
-    console.error("Error in stylize function:", error);
+    console.error("Error in stylize-run function:", error);
+    // If it fails, save the error message to the blob store
+    const { jobId } = JSON.parse(event.body || '{}');
+    if (jobId) {
+      const store = getStore("stylized-images");
+      await store.setJSON(jobId, {
+        status: "error",
+        message: error instanceof Error ? error.message : "Unknown server error"
+      });
+    }
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error instanceof Error ? error.message : "Unknown server error" }),

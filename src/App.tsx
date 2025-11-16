@@ -13,13 +13,7 @@ import {
 } from 'lucide-react'; 
 import logoImage from '/street-sketch_logo.webp'; 
 
-const productVariants = [
-  { name: 'Postcard (4" x 6")', id: 7674 },
-  { name: 'Small Print (8" x 10")', id: 10110 },
-  { name: 'Medium Print (12" x 16")', id: 10113 },
-  { name: 'Large Print (18" x 24")', id: 10116 },
-];
-
+// ... (dataURLtoBlob function is unchanged) ...
 function dataURLtoBlob(dataurl: string): Blob {
   const arr = dataurl.split(',');
   if (arr.length < 2) { throw new Error('Invalid data URL'); }
@@ -33,7 +27,36 @@ function dataURLtoBlob(dataurl: string): Blob {
   return new Blob([u8arr], { type: mime });
 }
 
+
 type AppStep = 'initial' | 'framing' | 'generating' | 'done';
+
+const productVariants = [
+  { name: 'Postcard (4" x 6")', id: 7674 },
+  { name: 'Small Print (8" x 10")', id: 10110 },
+  { name: 'Medium Print (12" x 16")', id: 10113 },
+  { name: 'Large Print (18" x 24")', id: 10116 },
+];
+
+// Custom hook for polling
+function useInterval(callback: () => void, delay: number | null) {
+  const savedCallback = useRef<() => void>();
+
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  useEffect(() => {
+    function tick() {
+      if (savedCallback.current) {
+        savedCallback.current();
+      }
+    }
+    if (delay !== null) {
+      let id = setInterval(tick, delay);
+      return () => clearInterval(id);
+    }
+  }, [delay]);
+}
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
@@ -41,7 +64,7 @@ const App: React.FC = () => {
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   
   const [isFetching, setIsFetching] = useState<boolean>(false);
-  const [isStylizing, setIsStylizing] = useState<boolean>(false);
+  const [isStylizing, setIsStylizing] = useState<boolean>(false); // This is now the "generating" state
   const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
   
   const [error, setError] = useState<string | null>(null);
@@ -53,9 +76,16 @@ const App: React.FC = () => {
   const [pitch, setPitch] = useState(0);
   const [fov, setFov] = useState(120);
 
+  // === NEW STATE FOR POLLING ===
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState<boolean>(false);
+  const pollCountRef = useRef<number>(0);
+  // === END OF NEW STATE ===
+
   const step2Ref = useRef<HTMLDivElement>(null);
   const finalResultRef = useRef<HTMLDivElement>(null);
 
+  // ... (handleStartOver and handleRecapture are unchanged) ...
   const handleStartOver = () => {
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(generatedImageUrl);
@@ -68,6 +98,9 @@ const App: React.FC = () => {
     setIsPurchasing(false);
     setError(null);
     setAppStep('initial');
+    setJobId(null); // Clear job
+    setIsPolling(false); // Stop polling
+    pollCountRef.current = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   
@@ -78,45 +111,43 @@ const App: React.FC = () => {
     setGeneratedImageUrl(null);
     setAppStep('framing'); 
     setError(null);
+    setJobId(null); // Clear job
+    setIsPolling(false); // Stop polling
+    pollCountRef.current = 0;
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
   };
 
+
+  // ... (handleAddressSubmit and useEffect for fetchStreetViewImage are unchanged) ...
   const handleAddressSubmit = useCallback(async (newAddress: string) => {
     console.log('[App.tsx] handleAddressSubmit called with:', newAddress);
     if (!newAddress.trim()) {
       setError('Please enter a valid address.');
       return;
     }
-
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(generatedImageUrl);
     }
-
     setIsFetching(true);
     setError(null);
     setGeneratedImageUrl(null);
     setOriginalImageUrl(null);
     setAppStep('framing'); 
-    
     setHeading(90);
     setPitch(0);
     setFov(120);
-    
     setAddress(newAddress);
-    
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-
   }, [generatedImageUrl]);
 
   useEffect(() => {
     if (appStep === 'framing' && address) {
       setIsFetching(true);
       setError(null);
-      
       try {
         const pov: StreetViewPov = { heading, pitch, fov };
         const { originalUrl } = fetchStreetViewImage(address, pov);
@@ -130,64 +161,119 @@ const App: React.FC = () => {
   }, [address, heading, pitch, fov, appStep]);
 
 
+  // === UPDATED handleStylizeImage ===
+  // This now *starts* the job and *starts* polling
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
-    console.log('[App.tsx] handleStylizeImage called');
     
+    console.log('[App.tsx] handleStylizeImage called');
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(generatedImageUrl);
     }
     
+    const newJobId = crypto.randomUUID(); // Generate a unique ID on the client
+    setJobId(newJobId);
     setAppStep('generating'); 
-    setIsStylizing(true); 
+    setIsStylizing(true); // This shows the spinner
+    setIsPolling(true); // This starts the polling interval
+    pollCountRef.current = 0; // Reset poll count
     setError(null);
 
     try {
-      const response = await fetch('/.netlify/functions/stylize', {
+      // Call the NEW background function
+      const response = await fetch('/.netlify/functions/stylize-run-background', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           streetViewUrl: originalImageUrl,
           artStyle: artStyle,
+          jobId: newJobId, // Send the job ID
         }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to generate image.');
+      // A 202 "Accepted" response is expected from a background function
+      if (response.status !== 202) {
+        throw new Error("Failed to start the image generation job.");
       }
-
-      const { generatedUrl } = await response.json();
       
-      const blob = dataURLtoBlob(generatedUrl);
-      const blobUrl = URL.createObjectURL(blob);
-      
-      setGeneratedImageUrl(blobUrl);
-      setAppStep('done'); 
-
-      setTimeout(() => {
-        finalResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      console.log('Job started successfully. Now polling...');
+      // Polling will handle the rest (see the useInterval hook)
 
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setAppStep('framing'); 
-      if (errorMessage.includes("403")) {
-           setError('Failed to load Street View image (Error 403). Check API key.');
-      } else if (errorMessage.includes("404")) {
-           setError('Could not find a Street View image for that address.');
-      } else {
-           setError(`Failed to generate the image: ${errorMessage}`);
-      }
-    } finally {
-      setIsStylizing(false); 
+      setError(`Failed to start the job: ${errorMessage}`);
+      setAppStep('framing'); // Go back to framing step
+      setIsStylizing(false);
+      setIsPolling(false);
     }
   }, [originalImageUrl, artStyle, generatedImageUrl]);
+  // === END OF UPDATED FUNCTION ===
 
 
+  // === NEW POLLING LOGIC ===
+  useInterval(() => {
+    // This function runs every 3 seconds IF isPolling is true
+    const checkJobStatus = async () => {
+      if (!jobId) {
+        setIsPolling(false);
+        return;
+      }
+      
+      pollCountRef.current += 1; // Increment poll count
+
+      // Timeout after 40 polls (2 minutes)
+      if (pollCountRef.current > 40) {
+        setIsPolling(false);
+        setIsStylizing(false);
+        setAppStep('framing');
+        setError("The request timed out. Please try again.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/.netlify/functions/stylize-check?jobId=${jobId}`);
+        
+        // If status is 200, the job is complete
+        if (response.status === 200) {
+          const data = await response.json();
+          if (data.status === 'complete') {
+            console.log("Polling success: Job is complete!");
+            setIsPolling(false);
+            setIsStylizing(false);
+            
+            const blob = dataURLtoBlob(data.generatedUrl);
+            const blobUrl = URL.createObjectURL(blob);
+            setGeneratedImageUrl(blobUrl);
+            setAppStep('done');
+            
+            setTimeout(() => {
+              finalResultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+        } else if (response.status === 500) {
+          // The job failed
+          const data = await response.json();
+          console.error("Polling error: Job failed", data.message);
+          setIsPolling(false);
+          setIsStylizing(false);
+          setAppStep('framing');
+          setError(`Image generation failed: ${data.message}`);
+        }
+        // If status is 202, we just keep polling (do nothing)
+        
+      } catch (e) {
+        console.error("Polling request failed:", e);
+        // Don't stop polling on a single failed network request, just try again
+      }
+    };
+    
+    checkJobStatus();
+  }, isPolling ? 3000 : null); // Run every 3 seconds, or not at all
+  // === END OF NEW POLLING LOGIC ===
+
+
+  // ... (handleDownload and handlePurchase are unchanged) ...
   const handleDownload = () => {
     if (!generatedImageUrl) return;
     const link = document.createElement('a');
@@ -246,18 +332,16 @@ const App: React.FC = () => {
     }
   };
 
+
   const isLoading = isFetching || isStylizing;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col items-center pt-16 pb-4 px-4 sm:px-6 lg:px-8">
       
+      {/* --- HEADER (Unchanged) --- */}
       {appStep !== 'generating' && appStep !== 'done' && (
         <header className="text-center mb-6 w-full max-w-4xl">
-          <img 
-            src={logoImage} 
-            alt="StreetSketch Logo" 
-            className="w-40 h-40 mx-auto mb-4 rounded-full shadow-lg border-4 border-white"
-          />
+          <img src={logoImage} alt="StreetSketch Logo" className="w-40 h-40 mx-auto mb-4 rounded-full shadow-lg border-4 border-white" />
           <h1 className="text-3xl sm:text-4xl font-sans font-bold text-slate-900 leading-tight">
             Turn your favorite place into beautiful art.
           </h1>
@@ -266,18 +350,14 @@ const App: React.FC = () => {
           </p>
         </header>
       )}
-
       {(appStep === 'generating' || appStep === 'done') && (
         <header className="text-center mb-6 w-full max-w-4xl">
-           <img 
-            src={logoImage} 
-            alt="StreetSketch Logo" 
-            className="w-40 h-40 mx-auto mb-4 rounded-full shadow-lg border-4 border-white"
-          />
+           <img src={logoImage} alt="StreetSketch Logo" className="w-40 h-40 mx-auto mb-4 rounded-full shadow-lg border-4 border-white" />
         </header>
       )}
       
       <main className="w-full max-w-4xl">
+        {/* --- STEP 1 (Unchanged) --- */}
         {(appStep === 'initial' || appStep === 'framing') && (
           <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 1: Choose a Location</h3>
@@ -297,16 +377,14 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {/* === STEP 2 (FRAMING) - UI FIXES APPLIED === */}
         {appStep === 'framing' && (
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
             
-            {/* === LAYOUT FIX === */}
-            {/* Use md:flex-row to put image/rotate and sliders side-by-side */}
             <div className="flex flex-col md:flex-row gap-6 justify-center">
 
               {/* Column 1: Image and Rotate Slider */}
-              {/* This column will grow to fit image, rotate slider width matches */}
               <div className="flex-1 flex flex-col gap-6 min-w-0">
                 {/* Image Container */}
                 <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
@@ -343,8 +421,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Column 2: Vertical Sliders */}
-              {/* This column shrinks to fit content */}
+              {/* Column 2: Vertical Sliders (side-by-side) */}
               <div className="flex-shrink-0 flex flex-row md:flex-col justify-center items-start gap-8 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Tilt" 
@@ -366,7 +443,6 @@ const App: React.FC = () => {
                 />
               </div>
             </div>
-            {/* === END OF LAYOUT FIX === */}
             
             {/* Step 3: Style Options */}
             <div className="mt-8 bg-white rounded-xl shadow-lg p-6 sm:p-8">
@@ -390,8 +466,9 @@ const App: React.FC = () => {
             </div>
           </div>
         )}
+        {/* === END OF STEP 2 (FRAMING) === */}
 
-        {/* Generating Spinner */}
+        {/* Generating Spinner (Unchanged, but text is updated) */}
         {appStep === 'generating' && (
           <div className="flex flex-col items-center justify-center min-h-[300px] animate-fade-in">
             <LoadingSpinner 
@@ -402,7 +479,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Step 4: Final Result */}
+        {/* Step 4: Final Result (Unchanged) */}
         {appStep === 'done' && generatedImageUrl && (
           <div className="mt-8 animate-fade-in" ref={finalResultRef}>
             <div className="flex flex-col items-center w-full max-w-3xl mx-auto">
