@@ -1,6 +1,6 @@
-// App.tsx
+// src/App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-// We remove stylizeImage because it's now on the backend
+// THESE PATHS ARE NOW CORRECTED
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';

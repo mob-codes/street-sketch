@@ -1,7 +1,8 @@
-
+// src/main.tsx
+import './index.css'; // <-- THIS IS THE FIX FOR YOUR STYLES
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App';
+import App from './App'; // This path is now correct
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
