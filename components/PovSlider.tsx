@@ -1,3 +1,4 @@
+// components/PovSlider.tsx
 import React from 'react';
 
 interface PovSliderProps {
@@ -23,20 +24,19 @@ const PovSlider: React.FC<PovSliderProps> = ({
 }) => {
   const isVertical = orientation === 'vertical';
 
-  // These classes are for styling the range input
-  // They use CSS tricks to make the slider vertical, which Tailwind can't do alone
   const sliderClasses = isVertical
+    // These classes use CSS to make the slider vertical
     ? "w-2 h-48 accent-indigo-600 [writing-mode:bt-lr] [-webkit-appearance:slider-vertical]"
     : "w-full h-2 accent-indigo-600";
 
-  // These classes control the layout of the label, icon, and slider
+  // UPDATED: Adjusted container classes for better vertical alignment
   const containerClasses = isVertical
-    ? "flex flex-col items-center h-64 justify-center"
+    ? "flex flex-col items-center justify-start h-full"
     : "w-full";
   
   const labelContainerClasses = isVertical
     ? "flex flex-col items-center gap-1"
-    : "flex items-center gap-1"; // Horizontal label
+    : "flex items-center gap-1";
 
   return (
     <div className={containerClasses}>

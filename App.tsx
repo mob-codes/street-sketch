@@ -1,13 +1,12 @@
 // App.tsx
-import './src/index.css';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-// UPDATED: No longer imports stylizeImage
+// We remove stylizeImage because it's now on the backend
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
 import ActionButton from './components/ActionButton';
 import FilterOptions from './components/FilterOptions';
-import PovSlider from './components/PovSlider'; // NEW: Import the slider component
+import PovSlider from './components/PovSlider';
 import { 
   Download, ShoppingCart, Loader2, Wand2, 
   MoveVertical, ArrowLeftRight, Search, RefreshCcw, MapPin, Camera
@@ -34,10 +33,7 @@ function dataURLtoBlob(dataurl: string): Blob {
   return new Blob([u8arr], { type: mime });
 }
 
-// UPDATED: Simplified flow, removed 'styling' step
 type AppStep = 'initial' | 'framing' | 'generating' | 'done';
-
-// REMOVED: PovSlider component is now in its own file
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
@@ -59,7 +55,6 @@ const App: React.FC = () => {
 
   const step2Ref = useRef<HTMLDivElement>(null);
   const finalResultRef = useRef<HTMLDivElement>(null);
-  // REMOVED: step3Ref
 
   const handleStartOver = () => {
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
@@ -134,9 +129,7 @@ const App: React.FC = () => {
     }
   }, [address, heading, pitch, fov, appStep]);
 
-  // REMOVED: handleCaptureClick
 
-  // UPDATED: This is your new backend-calling function
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     console.log('[App.tsx] handleStylizeImage called');
@@ -146,11 +139,10 @@ const App: React.FC = () => {
     }
     
     setAppStep('generating'); 
-    setIsStylizing(true); // Keep this for disabling buttons
+    setIsStylizing(true); 
     setError(null);
 
     try {
-      // Call our own backend function
       const response = await fetch('/.netlify/functions/stylize', {
         method: 'POST',
         headers: {
@@ -182,7 +174,7 @@ const App: React.FC = () => {
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setAppStep('framing'); // Go back to framing
+      setAppStep('framing'); 
       if (errorMessage.includes("403")) {
            setError('Failed to load Street View image (Error 403). Check API key.');
       } else if (errorMessage.includes("404")) {
@@ -197,7 +189,6 @@ const App: React.FC = () => {
 
 
   const handleDownload = () => {
-    // ... (This function is unchanged)
     if (!generatedImageUrl) return;
     const link = document.createElement('a');
     link.href = generatedImageUrl;
@@ -209,7 +200,6 @@ const App: React.FC = () => {
   };
   
   const handlePurchase = async () => {
-    // ... (This function is unchanged)
     if (!generatedImageUrl) return;
     setIsPurchasing(true);
     setError(null);
@@ -312,9 +302,11 @@ const App: React.FC = () => {
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
             
-            <div className="flex flex-col md:flex-row gap-6">
-              {/* Left Side: Image + Rotate Slider */}
-              <div className="flex-grow md:w-2/3">
+            {/* UPDATED: New flex layout for controls */}
+            <div className="flex flex-col md:flex-row gap-6 justify-center">
+
+              {/* Image Container */}
+              <div className="flex-shrink">
                 <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden max-h-96">
                   {originalImageUrl && (
                     <img 
@@ -334,21 +326,10 @@ const App: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
-                  <PovSlider 
-                    label="Rotate" 
-                    icon={<ArrowLeftRight className="w-4 h-4" />}
-                    value={heading} 
-                    onChange={setHeading} 
-                    min={0} 
-                    max={360}
-                    orientation="horizontal"
-                  />
-                </div>
               </div>
 
-              {/* Right Side: Vertical Sliders */}
-              <div className="flex-shrink-0 md:w-1/3 flex md:flex-col justify-around items-center gap-4 p-4 bg-white rounded-xl shadow-lg">
+              {/* Vertical Sliders Container */}
+              <div className="flex-shrink-0 flex flex-row md:flex-col justify-center items-start md:items-center gap-8 p-4 bg-white rounded-xl shadow-lg md:w-auto">
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-4 h-4" />}
@@ -368,6 +349,19 @@ const App: React.FC = () => {
                   orientation="vertical"
                 />
               </div>
+            </div>
+
+            {/* Horizontal Rotate Slider */}
+            <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
+              <PovSlider 
+                label="Rotate" 
+                icon={<ArrowLeftRight className="w-4 h-4" />}
+                value={heading} 
+                onChange={setHeading} 
+                min={0} 
+                max={360}
+                orientation="horizontal"
+              />
             </div>
             
             {/* Step 3: Style Options */}
@@ -459,7 +453,7 @@ const App: React.FC = () => {
               />
             </div>
             
-            {/* UPDATED: Prominent buttons */}
+            {/* UPDATED: More prominent buttons */}
             <div className="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
               <ActionButton
                 onClick={handleRecapture}
