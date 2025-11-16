@@ -13,7 +13,6 @@ export default defineConfig(({ mode }) => {
         react(),
         tailwindcss(),
       ],
-
       resolve: {
         alias: {
           '@': path.resolve(__dirname, './src'), 
