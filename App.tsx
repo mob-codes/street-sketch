@@ -1,6 +1,7 @@
 // App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { fetchStreetViewImage, stylizeImage, StreetViewPov } from './services/geminiService';
+// We remove stylizeImage because it's now on the backend
+import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
 import ActionButton from './components/ActionButton';
@@ -164,6 +165,9 @@ const App: React.FC = () => {
     }, 100);
   };
 
+  // 
+  // THIS IS THE NEW, SECURE FUNCTION
+  //
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     console.log('[App.tsx] handleStylizeImage called');
@@ -173,10 +177,30 @@ const App: React.FC = () => {
     }
     
     setAppStep('generating'); 
+    setIsStylizing(true); // Set loading state
     setError(null);
 
     try {
-      const { generatedUrl } = await stylizeImage(originalImageUrl, artStyle);
+      // Call our own backend function
+      const response = await fetch('/.netlify/functions/stylize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          streetViewUrl: originalImageUrl,
+          artStyle: artStyle,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to generate image.');
+      }
+
+      const { generatedUrl } = await response.json();
+      
+      // The backend now returns a data URL (data:image/...)
       const blob = dataURLtoBlob(generatedUrl);
       const blobUrl = URL.createObjectURL(blob);
       
@@ -196,12 +220,13 @@ const App: React.FC = () => {
       } else if (errorMessage.includes("404")) {
            setError('Could not find a Street View image for that address.');
       } else {
-           setError('Failed to generate the image. Please try again.');
+           setError(`Failed to generate the image: ${errorMessage}`);
       }
     } finally {
       setIsStylizing(false); 
     }
   }, [originalImageUrl, artStyle, generatedImageUrl]);
+  // END OF NEW FUNCTION
 
 
   const handleDownload = () => {
