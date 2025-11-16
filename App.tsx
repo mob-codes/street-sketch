@@ -1,4 +1,5 @@
 // App.tsx
+import './src/index.css';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 // UPDATED: No longer imports stylizeImage
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
