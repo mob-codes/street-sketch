@@ -1,6 +1,6 @@
-import type { Handler } from "@netlify/functions";
+// netlify/functions/stylize-run-background.ts
 import { GoogleGenAI, Modality } from "@google/genai";
-import { getStore } from "@netlify/blobs"; // <-- IMPORT BLOBS
+import { getStore, Context } from "@netlify/blobs"; // <-- Import Context
 
 // Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
@@ -16,46 +16,46 @@ const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType
   return { base64: base64, mimeType: blob.type };
 };
 
-const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+// === NEW V2 SYNTAX ===
+export default async (request: Request, context: Context) => {
+  if (request.method !== 'POST') {
+    return new Response("Method Not Allowed", { status: 405 });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error("[stylize-run] GEMINI_API_KEY is not set");
-    return { statusCode: 500, body: JSON.stringify({ error: "GEMINI_API_KEY is not set" }) };
+    return new Response(JSON.stringify({ error: "GEMINI_API_KEY is not set" }), { status: 500 });
   }
 
+  let jobId: string | null = null;
+  
   try {
-    // 1. GET DATA FROM FRONTEND
-    const { streetViewUrl, artStyle, jobId } = JSON.parse(event.body || '{}');
+    const { streetViewUrl, artStyle, jobId: reqJobId } = await request.json();
+    jobId = reqJobId; // Store jobId for the catch block
+
     if (!streetViewUrl || !artStyle || !jobId) {
-      return { statusCode: 400, body: JSON.stringify({ error: "Missing streetViewUrl, artStyle, or jobId" }) };
+      return new Response(JSON.stringify({ error: "Missing streetViewUrl, artStyle, or jobId" }), { status: 400 });
     }
     
     const ai = new GoogleGenAI({ apiKey });
     const { base64: base64Image, mimeType } = await imageUrlToBase64(streetViewUrl);
 
-    // 2. YOUR PROMPT (Unchanged)
+    // Your prompt
     let styleDescription = '';
     switch (artStyle) {
       case 'Oil Painting':
-        styleDescription = 'transform the result into a rich and textured oil painting. The style should feature visible, impasto brushstrokes and a deep color palette.';
+        styleDescription = 'transform the result into a rich and textured oil painting...';
         break;
       case 'Pencil Sketch':
-        styleDescription = 'transform the result into a detailed pencil sketch. The style should be monochromatic, emphasizing lines, shading, and texture to create a hand-drawn, artistic feel.';
+        styleDescription = 'transform the result into a detailed pencil sketch...';
         break;
       default:
-        styleDescription = 'transform the result into a vibrant and artistic watercolor painting. The style should be loose and expressive, with visible brushstrokes and color bleeds, typical of a real watercolor painting.';
+        styleDescription = 'transform the result into a vibrant and artistic watercolor painting...';
         break;
     }
-    const prompt = `
-      Analyze the provided street view image...
-      After cleaning the image, ${styleDescription} Ensure the final output is only the generated image itself, with no text or borders.
-    `; // (I've truncated your prompt for brevity, use your full one)
+    const prompt = `Analyze the provided street view image... ${styleDescription} ...with no text or borders.`; // (Use your full prompt)
 
-    // 3. CALL GEMINI (Unchanged)
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: [{ inlineData: { data: base64Image, mimeType } }, { text: prompt }] },
@@ -64,19 +64,16 @@ const handler: Handler = async (event) => {
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData) {
-        const base64ImageBytes: string = part.inlineData.data;
-        const generatedMimeType = part.inlineData.mimeType;
-        const generatedUrl = `data:${generatedMimeType};base64,${base64ImageBytes}`;
+        const generatedUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         
-        // 4. SAVE RESULT TO BLOB STORAGE
+        // Get store using the v2 context
         const store = getStore("stylized-images");
         await store.setJSON(jobId, {
           status: "complete",
           generatedUrl: generatedUrl
         });
         
-        // Background functions just need to return 200 to signal success
-        return { statusCode: 200, body: "Job complete." };
+        return new Response("Job complete.", { status: 200 });
       }
     }
     
@@ -84,20 +81,18 @@ const handler: Handler = async (event) => {
 
   } catch (error) {
     console.error("Error in stylize-run function:", error);
-    // If it fails, save the error message to the blob store
-    const { jobId } = JSON.parse(event.body || '{}');
     if (jobId) {
-      const store = getStore("stylized-images");
-      await store.setJSON(jobId, {
-        status: "error",
-        message: error instanceof Error ? error.message : "Unknown server error"
-      });
+      try {
+        const store = getStore("stylized-images");
+        await store.setJSON(jobId, {
+          status: "error",
+          message: error instanceof Error ? error.message : "Unknown server error"
+        });
+      } catch (storeError) {
+        console.error("Failed to even write error to blob store:", storeError);
+      }
     }
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error instanceof Error ? error.message : "Unknown server error" }),
-    };
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown server error" }), { status: 500 });
   }
 };
-
-export { handler };
+// === END V2 SYNTAX ===
