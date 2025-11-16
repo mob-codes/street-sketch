@@ -1,6 +1,5 @@
 // src/App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-// THESE PATHS ARE NOW CORRECTED
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';

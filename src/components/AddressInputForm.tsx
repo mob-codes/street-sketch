@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
 
 interface AddressInputFormProps {
   onSubmit: (address: string) => void;
   isLoading: boolean;
-  // NEW: Props to customize the button
   buttonText?: string;
   buttonIcon?: React.ReactNode;
 }
@@ -12,18 +11,21 @@ interface AddressInputFormProps {
 const AddressInputForm: React.FC<AddressInputFormProps> = ({ 
   onSubmit, 
   isLoading, 
-  buttonText = 'CREATE', // Default text
-  buttonIcon = <Sparkles className="w-5 h-5 mr-2" /> // Default icon
+  buttonText = 'CREATE',
+  buttonIcon = <Sparkles className="w-5 h-5 mr-2" />
 }) => {
   const [address, setAddress] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean>(false);
   const [isTouched, setIsTouched] = useState<boolean>(false);
   
-  const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
-  const formRef = useRef<HTMLFormElement>(null);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  // Create a ref for the <input> element
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // This ref will hold the Google Autocomplete instance
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const validateAddress = (addr: string): boolean => {
+    // A simple check to ensure it's a full-looking address
     return addr.trim().length > 10 && addr.includes(',');
   };
 
@@ -31,92 +33,74 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
     setIsValid(validateAddress(address));
   }, [address]);
   
+  // This new effect sets up the Google Autocomplete widget
   useEffect(() => {
-    if (window.google && window.google.maps && window.google.maps.places) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-        if (formRef.current && !formRef.current.contains(event.target as Node)) {
-            setSuggestions([]);
-        }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  const fetchSuggestions = useCallback((value: string) => {
-    if (autocompleteService.current && value.length > 2) {
-      autocompleteService.current.getPlacePredictions(
-        { input: value },
-        (predictions, status) => {
-          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
-            setSuggestions(predictions);
-          } else {
-            setSuggestions([]);
-          }
+    // Wait for the Google Maps script (and the input ref) to be ready
+    if (window.google && window.google.maps && window.google.maps.places && inputRef.current) {
+      
+      // Create the Autocomplete instance
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        inputRef.current,
+        {
+          types: ['address'], // Only search for addresses
+          fields: ['formatted_address'], // Only request the data we need
         }
       );
-    } else {
-      setSuggestions([]);
+      autocompleteRef.current = autocomplete;
+
+      // Add a listener for when the user selects a place
+      const listener = autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place && place.formatted_address) {
+          // Set our React state with the official, formatted address
+          setAddress(place.formatted_address);
+          setIsTouched(true);
+        }
+      });
+
+      // Clean up the listener when the component unmounts
+      return () => {
+        if (autocompleteRef.current) {
+            google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        }
+      };
     }
-  }, []);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      fetchSuggestions(address);
-    }, 200);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [address, fetchSuggestions]);
-
+  }, [isLoading]); // We re-run this if `isLoading` changes, to re-enable the input
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setAddress(value);
-  };
-
-  const handleSuggestionClick = (suggestion: google.maps.places.AutocompletePrediction) => {
-    setAddress(suggestion.description);
-    setSuggestions([]);
+    setAddress(e.target.value);
+    // Re-validate as the user types
+    if (isTouched) {
+      setIsValid(validateAddress(e.target.value));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsTouched(true);
     
-    let finalAddress = address;
-    if (suggestions.length > 0) {
-      finalAddress = suggestions[0].description;
-      setAddress(finalAddress);
-    }
-    
-    setSuggestions([]);
-    
-    const finalValid = validateAddress(finalAddress);
+    const finalValid = validateAddress(address);
     setIsValid(finalValid);
 
     if (finalValid && !isLoading) {
-      onSubmit(finalAddress);
+      onSubmit(address);
     }
   };
   
   const handleBlur = () => {
     setIsTouched(true);
+    // Also validate on blur
+    setIsValid(validateAddress(address));
   };
 
   const showError = isTouched && !isValid && address.length > 0;
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4" ref={formRef}>
+    // The form no longer needs a ref
+    <form onSubmit={handleSubmit} className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
       <div className="w-full">
         <input
+          ref={inputRef} // <-- Connect the ref to the input
           type="text"
           value={address}
           onChange={handleAddressChange}
@@ -130,29 +114,17 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
           aria-describedby="address-error"
           autoComplete="off"
         />
-        {suggestions.length > 0 && (
-          <ul className="absolute z-10 w-full sm:w-[calc(100%-150px)] bg-white border border-slate-300 rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-              <li 
-                key={suggestion.place_id || index} 
-                className="px-4 py-2 cursor-pointer hover:bg-indigo-50"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleSuggestionClick(suggestion);
-                }}
-              >
-                {suggestion.description}
-              </li>
-            ))}
-          </ul>
-        )}
+        
+        {/* The custom <ul> suggestion list is no longer needed.
+          The Google Autocomplete widget will automatically create and manage its own.
+        */}
+
         {showError && (
           <p id="address-error" className="text-red-600 text-sm mt-1" role="alert">
             Please enter a full address, e.g., Street, City, State.
           </p>
         )}
       </div>
-      {/* UPDATED: Button now uses props */}
       <button
         type="submit"
         disabled={isLoading}
