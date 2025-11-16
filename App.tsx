@@ -1,11 +1,12 @@
 // App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-// We remove stylizeImage because it's now on the backend
+// UPDATED: No longer imports stylizeImage
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
 import ActionButton from './components/ActionButton';
 import FilterOptions from './components/FilterOptions';
+import PovSlider from './components/PovSlider'; // NEW: Import the slider component
 import { 
   Download, ShoppingCart, Loader2, Wand2, 
   MoveVertical, ArrowLeftRight, Search, RefreshCcw, MapPin, Camera
@@ -32,36 +33,10 @@ function dataURLtoBlob(dataurl: string): Blob {
   return new Blob([u8arr], { type: mime });
 }
 
-type AppStep = 'initial' | 'framing' | 'styling' | 'generating' | 'done';
+// UPDATED: Simplified flow, removed 'styling' step
+type AppStep = 'initial' | 'framing' | 'generating' | 'done';
 
-const PovSlider: React.FC<{ 
-  label: string, 
-  icon: React.ReactNode,
-  value: number, 
-  onChange: (value: number) => void, 
-  min: number, 
-  max: number, 
-  step?: number 
-}> = ({ label, icon, value, onChange, min, max, step = 1 }) => (
-  <div className="w-full px-2">
-    <label htmlFor={label} className="block text-sm font-medium text-slate-700 mb-1">
-      <span className="flex items-center">
-        {icon}
-        <span className="ml-2">{label} ({value}°)</span>
-      </span>
-    </label>
-    <input
-      type="range"
-      id={label}
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      onChange={(e) => onChange(Number(e.target.value))}
-      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-    />
-  </div>
-);
+// REMOVED: PovSlider component is now in its own file
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
@@ -82,8 +57,8 @@ const App: React.FC = () => {
   const [fov, setFov] = useState(120);
 
   const step2Ref = useRef<HTMLDivElement>(null);
-  const step3Ref = useRef<HTMLDivElement>(null); 
   const finalResultRef = useRef<HTMLDivElement>(null);
+  // REMOVED: step3Ref
 
   const handleStartOver = () => {
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
@@ -158,16 +133,9 @@ const App: React.FC = () => {
     }
   }, [address, heading, pitch, fov, appStep]);
 
-  const handleCaptureClick = () => {
-    setAppStep('styling'); 
-    setTimeout(() => {
-      step3Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
-  };
+  // REMOVED: handleCaptureClick
 
-  // 
-  // THIS IS THE NEW, SECURE FUNCTION
-  //
+  // UPDATED: This is your new backend-calling function
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     console.log('[App.tsx] handleStylizeImage called');
@@ -177,7 +145,7 @@ const App: React.FC = () => {
     }
     
     setAppStep('generating'); 
-    setIsStylizing(true); // Set loading state
+    setIsStylizing(true); // Keep this for disabling buttons
     setError(null);
 
     try {
@@ -200,7 +168,6 @@ const App: React.FC = () => {
 
       const { generatedUrl } = await response.json();
       
-      // The backend now returns a data URL (data:image/...)
       const blob = dataURLtoBlob(generatedUrl);
       const blobUrl = URL.createObjectURL(blob);
       
@@ -214,7 +181,7 @@ const App: React.FC = () => {
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
-      setAppStep('styling'); 
+      setAppStep('framing'); // Go back to framing
       if (errorMessage.includes("403")) {
            setError('Failed to load Street View image (Error 403). Check API key.');
       } else if (errorMessage.includes("404")) {
@@ -226,10 +193,10 @@ const App: React.FC = () => {
       setIsStylizing(false); 
     }
   }, [originalImageUrl, artStyle, generatedImageUrl]);
-  // END OF NEW FUNCTION
 
 
   const handleDownload = () => {
+    // ... (This function is unchanged)
     if (!generatedImageUrl) return;
     const link = document.createElement('a');
     link.href = generatedImageUrl;
@@ -241,6 +208,7 @@ const App: React.FC = () => {
   };
   
   const handlePurchase = async () => {
+    // ... (This function is unchanged)
     if (!generatedImageUrl) return;
     setIsPurchasing(true);
     setError(null);
@@ -292,8 +260,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex flex-col items-center pt-16 pb-4 px-4 sm:px-6 lg:px-8">
       
-      {/* Show full header for initial steps */}
-      {(appStep === 'initial' || appStep === 'framing' || appStep === 'styling') && (
+      {appStep !== 'generating' && appStep !== 'done' && (
         <header className="text-center mb-6 w-full max-w-4xl">
           <img 
             src={logoImage} 
@@ -309,7 +276,6 @@ const App: React.FC = () => {
         </header>
       )}
 
-      {/* Show just the logo for generating and done steps */}
       {(appStep === 'generating' || appStep === 'done') && (
         <header className="text-center mb-6 w-full max-w-4xl">
            <img 
@@ -321,8 +287,7 @@ const App: React.FC = () => {
       )}
       
       <main className="w-full max-w-4xl">
-        {/* UPDATED: Show Step 1 always, except for the final steps */}
-        {(appStep === 'initial' || appStep === 'framing' || appStep === 'styling') && (
+        {(appStep === 'initial' || appStep === 'framing') && (
           <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 1: Choose a Location</h3>
             <AddressInputForm 
@@ -341,113 +306,100 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* --- Main Content Area --- */}
-
-        {/* Step 2: Framing */}
-        {(appStep === 'framing' || appStep === 'styling') && (
+        {/* UPDATED: Combined Step 2 & 3 */}
+        {appStep === 'framing' && (
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
-            <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden max-h-96">
-              {originalImageUrl && (
-                <img 
-                  src={originalImageUrl} 
-                  alt="Original Street View" 
-                  className="w-full h-full object-cover"
-                  onLoad={() => setIsFetching(false)}
-                  onError={() => {
-                    setError("Could not find a Street View image for this address.");
-                    setIsFetching(false);
-                  }}
-                />
-              )}
-              {isFetching && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              )}
-            </div>
             
-            {/* Show controls ONLY during framing step */}
-            {appStep === 'framing' && (
-              <>
-                <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <PovSlider 
-                      label="Pan (Rotate)" 
-                      icon={<ArrowLeftRight className="w-4 h-4" />}
-                      value={heading} 
-                      onChange={setHeading} 
-                      min={0} 
-                      max={360} 
+            <div className="flex flex-col md:flex-row gap-6">
+              {/* Left Side: Image + Rotate Slider */}
+              <div className="flex-grow md:w-2/3">
+                <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden max-h-96">
+                  {originalImageUrl && (
+                    <img 
+                      src={originalImageUrl} 
+                      alt="Original Street View" 
+                      className="w-full h-full object-cover"
+                      onLoad={() => setIsFetching(false)}
+                      onError={() => {
+                        setError("Could not find a Street View image for this address.");
+                        setIsFetching(false);
+                      }}
                     />
-                    <PovSlider 
-                      label="Tilt (Vertical)" 
-                      icon={<MoveVertical className="w-4 h-4" />}
-                      value={pitch} 
-                      onChange={setPitch} 
-                      min={-90} 
-                      max={90} 
-                    />
-                    <PovSlider 
-                      label="Zoom (Field of View)" 
-                      icon={<Search className="w-4 h-4" />}
-                      value={fov} 
-                      onChange={setFov} 
-                      min={10} 
-                      max={120} 
-                    />
-                  </div>
+                  )}
+                  {isFetching && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="mt-6 flex justify-center">
-                  <ActionButton
-                    onClick={handleCaptureClick}
-                    text="Capture Shot"
-                    icon={<Camera className="w-5 h-5 mr-2" />}
-                    className="bg-indigo-600 hover:bg-indigo-700"
-                    disabled={isFetching}
+                <div className="mt-6 p-4 bg-white rounded-xl shadow-lg">
+                  <PovSlider 
+                    label="Rotate" 
+                    icon={<ArrowLeftRight className="w-4 h-4" />}
+                    value={heading} 
+                    onChange={setHeading} 
+                    min={0} 
+                    max={360}
+                    orientation="horizontal"
                   />
                 </div>
-              </>
-            )}
-            
-            {/* Spacer div to push Step 3 up */}
-            <div className="h-96" />
-          </div>
-        )}
-        
-        {/* Step 3: Styling (Only visible after capture) */}
-        {appStep === 'styling' && (
-            <div ref={step3Ref} className="mt-8 animate-fade-in">
-              <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
-                <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 3: Choose Your Style</h3>
-                <FilterOptions 
-                  selectedStyle={artStyle} 
-                  onStyleChange={setArtStyle} 
-                  isLoading={isLoading}
-                />
               </div>
 
-              <div className="mt-6 flex justify-center">
-                <ActionButton
-                  onClick={handleStylizeImage}
-                  text={`Stylize in ${artStyle}!`}
-                  icon={<Wand2 className="w-5 h-5 mr-2" />}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                  disabled={isStylizing || isFetching}
+              {/* Right Side: Vertical Sliders */}
+              <div className="flex-shrink-0 md:w-1/3 flex md:flex-col justify-around items-center gap-4 p-4 bg-white rounded-xl shadow-lg">
+                <PovSlider 
+                  label="Tilt" 
+                  icon={<MoveVertical className="w-4 h-4" />}
+                  value={pitch} 
+                  onChange={setPitch} 
+                  min={-90} 
+                  max={90}
+                  orientation="vertical"
+                />
+                <PovSlider 
+                  label="Zoom" 
+                  icon={<Search className="w-4 h-4" />}
+                  value={fov} 
+                  onChange={setFov} 
+                  min={10} 
+                  max={120}
+                  orientation="vertical"
                 />
               </div>
-              
-              {/* Spacer div */}
-              <div className="h-96" />
             </div>
+            
+            {/* Step 3: Style Options */}
+            <div className="mt-8 bg-white rounded-xl shadow-lg p-6 sm:p-8">
+              <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 3: Choose Your Style</h3>
+              <FilterOptions 
+                selectedStyle={artStyle} 
+                onStyleChange={setArtStyle} 
+                isLoading={isLoading}
+              />
+            </div>
+
+            {/* Main CTA */}
+            <div className="mt-6 flex justify-center">
+              <ActionButton
+                onClick={handleStylizeImage}
+                text={`Stylize in ${artStyle}!`}
+                icon={<Wand2 className="w-5 h-5 mr-2" />}
+                className="bg-indigo-600 hover:bg-indigo-700"
+                disabled={isStylizing || isFetching}
+              />
+            </div>
+          </div>
         )}
 
         {/* Generating Spinner */}
         {appStep === 'generating' && (
           <div className="flex flex-col items-center justify-center min-h-[300px] animate-fade-in">
-            {/* UPDATED: New spinner text */}
-            <LoadingSpinner text="Generating your artwork... This should only take a few seconds" size="large" />
+            <LoadingSpinner 
+              mainText="Generating your artwork..." 
+              subText="This should only take a few seconds"
+              size="large" 
+            />
           </div>
         )}
 
@@ -506,23 +458,22 @@ const App: React.FC = () => {
               />
             </div>
             
-            <div className="mt-8 text-center flex justify-center gap-6">
-              {/* NEW: Recapture Button */}
-              <button
+            {/* UPDATED: Prominent buttons */}
+            <div className="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
+              <ActionButton
                 onClick={handleRecapture}
-                className="text-slate-600 hover:text-indigo-600 font-medium inline-flex items-center"
-              >
-                <Camera className="w-4 h-4 mr-2" />
-                Recapture
-              </button>
-              
-              <button
+                text="Recapture"
+                icon={<Camera className="w-4 h-4 mr-2" />}
+                className="bg-slate-200 text-slate-800 hover:bg-slate-300"
+                disabled={isPurchasing}
+              />
+              <ActionButton
                 onClick={handleStartOver}
-                className="text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
-              >
-                <RefreshCcw className="w-4 h-4 mr-2" />
-                Start Over
-              </button>
+                text="Start Over"
+                icon={<RefreshCcw className="w-4 h-4 mr-2" />}
+                className="bg-indigo-600 hover:bg-indigo-700"
+                disabled={isPurchasing}
+              />
             </div>
 
           </div>

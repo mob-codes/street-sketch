@@ -1,10 +1,10 @@
 // components/LoadingSpinner.tsx
 import React from 'react';
-import { Loader2 } from 'lucide-react'; // Using a simple icon
+import { Loader2 } from 'lucide-react'; 
 
 interface LoadingSpinnerProps {
-  mainText?: string; // UPDATED: Changed from 'text'
-  subText?: string;  // NEW: Added subText prop
+  mainText?: string; // UPDATED
+  subText?: string;  // NEW
   size?: 'small' | 'medium' | 'large';
 }
 
@@ -30,7 +30,6 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     <div className="flex flex-col items-center justify-center my-10 text-slate-600">
       <Loader2 className={`${spinnerSizeClass} text-indigo-600 animate-spin`} />
       <p className={`mt-4 ${textSizeClass}`}>{mainText}</p>
-      {/* NEW: Renders subText if it exists */}
       {subText && (
         <p className={`mt-1 ${subTextSizeClass} text-slate-500`}>{subText}</p>
       )}
