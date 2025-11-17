@@ -1,5 +1,5 @@
 // netlify/functions/create-printful-order.ts
-import type { Context } from "@netlify/functions"; 
+import type { Context } from "@netlify/functions"; // <-- Import Context
 
 function dataURLtoBlob(dataurl: string): Blob {
   // ... (this function is unchanged) ...
@@ -15,6 +15,7 @@ function dataURLtoBlob(dataurl: string): Blob {
   return new Blob([u8arr], { type: mime });
 }
 
+// === NEW V2 SYNTAX ===
 export default async (request: Request, context: Context) => {
   if (request.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), { status: 405 });
@@ -30,16 +31,14 @@ export default async (request: Request, context: Context) => {
     if (!imageUrl || !variantId) {
       return new Response(JSON.stringify({ error: 'Missing imageUrl or variantId' }), { status: 400 });
     }
-
-    // --- THIS IS THE SUGGESTED CHANGE ---
+    
+    // --- Server-side Validation ---
     // 1. Validate image type
-    // The app only generates PNGs, so we should only accept PNGs.
     if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:image/png;base64,')) {
         return new Response(JSON.stringify({ error: 'Invalid image format. Expected PNG data URL.' }), { status: 400 });
     }
 
     // 2. Validate image size (e.g., < 15MB)
-    // This prevents abuse and oversized uploads.
     const base64Data = imageUrl.split(',')[1];
     const buffer = Buffer.from(base64Data, 'base64');
     const fileSizeInMB = buffer.length / (1024 * 1024);
@@ -47,18 +46,17 @@ export default async (request: Request, context: Context) => {
     if (fileSizeInMB > 15) { // 15MB limit
          return new Response(JSON.stringify({ error: 'Image file is too large (Max 15MB).' }), { status: 400 });
     }
-    // --- END OF CHANGE ---
+    // --- End Validation ---
 
     const PRINTFUL_API_URL = 'https://api.printful.com';
     const AUTH_HEADERS = {
       'Authorization': `Bearer ${PRINTFUL_API_KEY}`,
       'Content-Type': 'application/json'
     };
-    
+
     // 2. Upload Image
     console.log('Uploading file to Printful...');
-    // We already have the buffer, but dataURLtoBlob is also fine
-    const imageBlob = dataURLtoBlob(imageUrl); 
+    const imageBlob = dataURLtoBlob(imageUrl);
     const formData = new FormData();
     formData.append('file', imageBlob, 'artwork.png');
 
@@ -97,7 +95,9 @@ export default async (request: Request, context: Context) => {
     if (!orderResponse.ok) {
       const errorText = await orderResponse.text();
       console.error('Printful order creation failed:', errorText);
-      throw.new Error(`Printful order API error (${orderResponse.status})`);
+      // === THIS WAS THE FIX ===
+      // Changed "throw.new Error" to "throw new Error"
+      throw new Error(`Printful order API error (${orderResponse.status})`);
     }
 
     const orderApiResult = await orderResponse.json();
@@ -114,3 +114,4 @@ export default async (request: Request, context: Context) => {
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown server error' }), { status: 500 });
   }
 };
+// === END V2 SYNTAX ===
