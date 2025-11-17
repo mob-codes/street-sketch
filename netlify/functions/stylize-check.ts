@@ -1,6 +1,6 @@
 // netlify/functions/stylize-check.ts
-import { getStore } from "@netlify/blobs"; // <-- CORRECTED
-import type { Context } from "@netlify/functions"; // <-- CORRECTED
+import { getStore } from "@netlify/blobs";
+import type { Context } from "@netlify/functions";
 
 // NEW V2 SYNTAX
 export default async (request: Request, context: Context) => {
@@ -13,7 +13,11 @@ export default async (request: Request, context: Context) => {
 
   // Get store using the v2 context
   const store = getStore("stylized-images");
-  const jobData = await store.getJSON(jobId, { type: 'json' });
+  
+  // === THIS IS THE FIX ===
+  // It's not store.getJSON(jobId, ...), it's store.get(jobId, ...)
+  const jobData = await store.get(jobId, { type: 'json' });
+  // === END OF FIX ===
 
   if (jobData) {
     if (jobData.status === "complete") {
