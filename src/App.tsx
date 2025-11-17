@@ -37,7 +37,7 @@ const productVariants = [
   { name: 'Large Print (18" x 24")', id: 10116 },
 ];
 
-// Custom hook for polling
+// ... (useInterval and zoom conversion functions are unchanged) ...
 function useInterval(callback: () => void, delay: number | null) {
   const savedCallback = useRef<() => void>();
 
@@ -58,38 +58,29 @@ function useInterval(callback: () => void, delay: number | null) {
   }, [delay]);
 }
 
-// === UPDATED ZOOM LOGIC ===
-// Converts API FOV (120-10) to a user-facing percentage (0-100)
 const convertFovToZoomPercent = (fovValue: number) => {
-  // Input range: 120 (min zoom) to 10 (max zoom)
-  // Output range: 0% (min zoom) to 100% (max zoom)
   const totalRange = 120 - 10;
   const currentVal = 120 - fovValue;
   const percent = Math.round((currentVal / totalRange) * 100);
   return percent;
 };
 
-// Converts user-facing percentage (0-100) back to API FOV (120-10)
 const convertZoomPercentToFov = (percent: number) => {
-  // Input range: 0% (min zoom) to 100% (max zoom)
-  // Output range: 120 (min zoom) to 10 (max zoom)
   const fovRange = 120 - 10;
   const fovValue = 120 - (percent / 100) * fovRange;
   return Math.round(fovValue);
 };
-// === END UPDATED ZOOM LOGIC ===
+
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
   
-  // === REFACTOR: Store both blob URL (for display) and data URL (for purchase) ===
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null); // This will be the blob: URL
-  const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null); // This will be the data: URL
-  // === END REFACTOR ===
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null); 
+  const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null); 
 
   const [isFetching, setIsFetching] = useState<boolean>(false);
-  const [isStylizing, setIsStylizing] = useState<boolean>(false); // This is now the "generating" state
+  const [isStylizing, setIsStylizing] = useState<boolean>(false); 
   const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
   
   const [error, setError] = useState<string | null>(null);
@@ -116,14 +107,14 @@ const App: React.FC = () => {
     }
     setOriginalImageUrl(null);
     setGeneratedImageUrl(null);
-    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
+    setGeneratedDataUrl(null); 
     setIsFetching(false);
     setIsStylizing(false);
     setIsPurchasing(false);
     setError(null);
     setAppStep('initial');
-    setJobId(null); // Clear job
-    setIsPolling(false); // Stop polling
+    setJobId(null); 
+    setIsPolling(false); 
     pollCountRef.current = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -133,11 +124,11 @@ const App: React.FC = () => {
       URL.revokeObjectURL(generatedImageUrl);
     }
     setGeneratedImageUrl(null);
-    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
+    setGeneratedDataUrl(null); 
     setAppStep('framing'); 
     setError(null);
-    setJobId(null); // Clear job
-    setIsPolling(false); // Stop polling
+    setJobId(null); 
+    setIsPolling(false); 
     pollCountRef.current = 0;
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -157,7 +148,7 @@ const App: React.FC = () => {
     setIsFetching(true);
     setError(null);
     setGeneratedImageUrl(null);
-    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
+    setGeneratedDataUrl(null); 
     setOriginalImageUrl(null);
     setAppStep('framing'); 
     setHeading(90);
@@ -168,8 +159,9 @@ const App: React.FC = () => {
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-  }, [generatedImageUrl]); // Keep generatedImageUrl dependency for revokeObjectURL
+  }, [generatedImageUrl]); 
 
+  // ... (useEffect for fetchStreetViewImage is unchanged) ...
   useEffect(() => {
     if (appStep === 'framing' && address) {
       setIsFetching(true);
@@ -187,7 +179,7 @@ const App: React.FC = () => {
   }, [address, heading, pitch, fov, appStep]);
 
 
-  // handleStylizeImage is unchanged
+  // ... (handleStylizeImage is unchanged) ...
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     
@@ -196,7 +188,7 @@ const App: React.FC = () => {
       URL.revokeObjectURL(generatedImageUrl);
     }
     
-    const newJobId = crypto.randomUUID(); // Generate a unique ID on the client
+    const newJobId = crypto.randomUUID(); 
     setJobId(newJobId);
     setAppStep('generating'); 
     setIsStylizing(true); 
@@ -229,9 +221,10 @@ const App: React.FC = () => {
       setIsStylizing(false);
       setIsPolling(false);
     }
-  }, [originalImageUrl, artStyle, generatedImageUrl]); // Keep generatedImageUrl
+  }, [originalImageUrl, artStyle, generatedImageUrl]); 
 
 
+  // ... (useInterval polling logic is unchanged) ...
   useInterval(() => {
     const checkJobStatus = async () => {
       if (!jobId) {
@@ -259,14 +252,12 @@ const App: React.FC = () => {
             setIsPolling(false);
             setIsStylizing(false);
             
-            // === REFACTOR: Save both dataURL and blobUrl ===
-            const dataUrl = data.generatedUrl; // This is the data: URL
+            const dataUrl = data.generatedUrl; 
             const blob = dataURLtoBlob(dataUrl);
             const blobUrl = URL.createObjectURL(blob);
             
-            setGeneratedDataUrl(dataUrl); // <-- Save the data URL
-            setGeneratedImageUrl(blobUrl); // <-- Save the blob URL (for display/download)
-            // === END REFACTOR ===
+            setGeneratedDataUrl(dataUrl); 
+            setGeneratedImageUrl(blobUrl); 
 
             setAppStep('done');
             
@@ -292,37 +283,28 @@ const App: React.FC = () => {
   }, isPolling ? 3000 : null); 
 
 
-  // === UPDATED DOWNLOAD HANDLER ===
+  // ... (handleDownload with new filename is unchanged) ...
   const handleDownload = () => {
     if (!generatedImageUrl) return;
 
-    // Check for mobile devices
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
 
     if (isMobile) {
-      // On mobile, open the image in a new tab.
-      // The user can then long-press to "Save to Photos".
       window.open(generatedImageUrl, '_blank');
     } else {
-      // On desktop, perform the file download.
       const link = document.createElement('a');
       link.href = generatedImageUrl;
 
-      // === NEW FILENAME LOGIC ===
-      // 1. Sanitize address: lowercase, replace all non-alphanumeric sequences with a single underscore
       const addressPart = address
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_') // Replace all non-alnum sequences with one underscore
-        .replace(/^_|_$/g, '');     // Remove leading/trailing underscores
+        .replace(/[^a-z0-9]+/g, '_') 
+        .replace(/^_|_$/g, '');     
         
-      // 2. Sanitize style: lowercase, replace spaces with underscore
       const stylePart = artStyle.toLowerCase().replace(/ /g, '_');
 
-      // 3. Create the final filename
       link.download = `Street-sketch_of_${addressPart}_${stylePart}.png`;
-      // === END NEW FILENAME LOGIC ===
 
       document.body.appendChild(link);
       link.click();
@@ -330,9 +312,8 @@ const App: React.FC = () => {
     }
   };
   
-  // === REFACTOR: handlePurchase is now much simpler ===
+  // ... (handlePurchase is unchanged) ...
   const handlePurchase = async () => {
-    // Use the data URL directly
     if (!generatedDataUrl) return; 
 
     setIsPurchasing(true);
@@ -343,7 +324,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl: generatedDataUrl, // <-- Send the data URL
+          imageUrl: generatedDataUrl, 
           variantId: selectedVariantId,
         }),
       });
@@ -364,7 +345,6 @@ const App: React.FC = () => {
       setIsPurchasing(false);
     }
   };
-  // === END REFACTOR ===
 
 
   const isLoading = isFetching || isStylizing;
@@ -420,7 +400,8 @@ const App: React.FC = () => {
             <div className="flex flex-col gap-6 justify-center">
 
               {/* Box 1: Image */}
-              <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
+              {/* === UPDATED === Changed aspect-video to aspect-[4/3] */}
+              <div className="relative w-full aspect-[4/3] bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
                 {originalImageUrl && (
                   <img 
                     src={originalImageUrl} 
@@ -462,7 +443,6 @@ const App: React.FC = () => {
                   orientation="horizontal"
                   unitLabel="°" 
                 />
-                {/* === UPDATED ZOOM SLIDER === */}
                 <PovSlider 
                   label="Zoom" 
                   icon={<Search className="w-5 h-5" />}
@@ -473,11 +453,10 @@ const App: React.FC = () => {
                     setZoomPercent(newPercent);
                     setFov(convertZoomPercentToFov(newPercent));
                   }} 
-                  min={0} // 0% on the left
-                  max={100} // 100% on the right
+                  min={0} 
+                  max={100} 
                   orientation="horizontal"
                 />
-                {/* === END UPDATED ZOOM SLIDER === */}
               </div>
             </div>
             
@@ -525,10 +504,11 @@ const App: React.FC = () => {
           <div className="mt-8 animate-fade-in" ref={finalResultRef}>
             <div className="flex flex-col items-center w-full max-w-3xl mx-auto">
               <h3 className="text-lg font-semibold text-slate-700 mb-3">Your {artStyle} Masterpiece</h3>
+              {/* === UPDATED === Changed aspect-video to aspect-[4/3] */}
               <img 
                 src={generatedImageUrl} 
                 alt={`Generated ${artStyle}`}
-                className="rounded-xl shadow-2xl border-4 border-white object-cover aspect-video"
+                className="rounded-xl shadow-2xl border-4 border-white object-cover aspect-[4/3]"
               />
             </div>
             
@@ -545,7 +525,6 @@ const App: React.FC = () => {
 
             {/* 2. Select Product */}
             <div className="mt-6 max-w-sm mx-auto">
-              {/* UPDATED: Added text-center to label */}
               <label htmlFor="product" className="block text-sm font-medium text-slate-700 text-center">
                 Select Product
               </label>
@@ -553,7 +532,6 @@ const App: React.FC = () => {
                 id="product"
                 name="product"
                 disabled={isPurchasing}
-                /* UPDATED: Added select-text-center class */
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md shadow-sm select-text-center"
                 value={selectedVariantId}
                 onChange={(e) => setSelectedVariantId(Number(e.target.value))}
@@ -589,7 +567,6 @@ const App: React.FC = () => {
                 onClick={handleRecapture}
                 text="Recapture"
                 icon={<Camera className="w-4 h-4 mr-2" />}
-                /* UPDATED: Changed color to indigo */
                 className="bg-indigo-600 text-white hover:bg-indigo-700"
                 disabled={isPurchasing}
               />

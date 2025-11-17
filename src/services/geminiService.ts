@@ -1,4 +1,4 @@
-// services/geminiService.ts
+// src/services/geminiService.ts
 
 // This interface is used by App.tsx
 export interface StreetViewPov {
@@ -16,7 +16,9 @@ export const fetchStreetViewImage = (address: string, pov?: StreetViewPov): { or
     throw new Error("VITE_MAPS_API_KEY is not set.");
   }
   
-  let streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${encodeURIComponent(address)}&key=${apiKey}`;
+  // === UPDATED ===
+  // We now request a 1024x768 image, which is a high-res 4:3 aspect ratio.
+  let streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=1024x768&location=${encodeURIComponent(address)}&key=${apiKey}`;
 
   if (pov) {
     streetViewUrl += `&heading=${pov.heading}&pitch=${pov.pitch}&fov=${pov.fov}`;
@@ -25,4 +27,3 @@ export const fetchStreetViewImage = (address: string, pov?: StreetViewPov): { or
   console.log('[geminiService] Built Street View URL:', streetViewUrl);
   return { originalUrl: streetViewUrl };
 };
-

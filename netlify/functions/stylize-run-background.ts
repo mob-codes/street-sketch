@@ -3,14 +3,12 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { getStore } from "@netlify/blobs"; 
 import type { Context } from "@netlify/functions"; 
 
-// Node.js method to convert image URL to base64
+// ... (imageUrlToBase64 function is unchanged) ...
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
   const response = await fetch(url);
   if (!response.ok) { throw new Error(`Failed to fetch image: ${response.status}`); }
   const blob = await response.blob();
-  // This check is very smart.
   if (blob.type === 'image/png' && blob.size < 20000) {
-    // This is the error we will catch below
     throw new Error("404: No Street View imagery available.");
   }
   const arrayBuffer = await blob.arrayBuffer();
@@ -19,7 +17,7 @@ const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType
   return { base64: base64, mimeType: blob.type };
 };
 
-// === NEW V2 SYNTAX ===
+
 export default async (request: Request, context: Context) => {
   if (request.method !== 'POST') {
     return new Response("Method Not Allowed", { status: 405 });
@@ -57,7 +55,9 @@ export default async (request: Request, context: Context) => {
         styleDescription = 'transform the result into a vibrant and artistic watercolor painting...';
         break;
     }
-    const prompt = `Analyze the provided street view image, remove parked and moving cars trucks and vehicles, pedestrians, and garbage cans and reproduce in ${styleDescription} with no text or borders. Do not remove trees, fences, or architectural features, and do not add objects. Fade gently to white at the edges for an artistic look`; // (Use your full prompt)
+
+    // === UPDATED === Added instruction for aspect ratio
+    const prompt = `Analyze the provided street view image, remove parked and moving cars trucks and vehicles, pedestrians, and garbage cans and reproduce in ${styleDescription} with no text or borders. Do not remove trees, fences, or architectural features, and do not add objects. Fade gently to white at the edges for an artistic look. The final output image must have a 4:3 aspect ratio.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
@@ -84,20 +84,17 @@ export default async (request: Request, context: Context) => {
   } catch (error) {
     console.error("Error in stylize-run function:", error);
     
-    // --- THIS IS THE SUGGESTED CHANGE ---
     let errorMessage = error instanceof Error ? error.message : "Unknown server error";
-    // Check for our specific "image not found" error
     if (errorMessage.startsWith("404:")) {
         errorMessage = "We couldn't find Street View imagery for that address. Please try a nearby address or intersection.";
     }
-    // --- END OF CHANGE ---
 
     if (jobId) {
       try {
         const store = getStore("stylized-images");
         await store.setJSON(jobId, {
           status: "error",
-          message: errorMessage // <-- This now sends the user-friendly message
+          message: errorMessage 
         });
       } catch (storeError) {
         console.error("Failed to even write error to blob store:", storeError);
