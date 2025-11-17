@@ -1,5 +1,4 @@
 // src/App.tsx
-import './index.css'; // Make sure this is in src/main.tsx, not here
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
