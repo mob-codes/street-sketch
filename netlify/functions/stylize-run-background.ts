@@ -3,12 +3,14 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { getStore } from "@netlify/blobs"; 
 import type { Context } from "@netlify/functions"; 
 
-// ... (imageUrlToBase64 function is unchanged) ...
+// Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
   const response = await fetch(url);
   if (!response.ok) { throw new Error(`Failed to fetch image: ${response.status}`); }
   const blob = await response.blob();
+  // This check is very smart.
   if (blob.type === 'image/png' && blob.size < 20000) {
+    // This is the error we will catch below
     throw new Error("404: No Street View imagery available.");
   }
   const arrayBuffer = await blob.arrayBuffer();
@@ -17,7 +19,7 @@ const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType
   return { base64: base64, mimeType: blob.type };
 };
 
-
+// === NEW V2 SYNTAX ===
 export default async (request: Request, context: Context) => {
   if (request.method !== 'POST') {
     return new Response("Method Not Allowed", { status: 405 });
@@ -55,9 +57,26 @@ export default async (request: Request, context: Context) => {
         styleDescription = 'transform the result into a vibrant and artistic watercolor painting...';
         break;
     }
+    
+    // === UPDATED PROMPT ===
+    // This prompt is now much more specific about aspect ratio and text removal.
+    const prompt = `
+Analyze the provided 1024x768 street view image.
+Reproduce the image in the style of a ${styleDescription}.
+You MUST remove the following:
+1.  All parked and moving cars, trucks, vehicles, and pedestrians.
+2.  All garbage cans or trash.
+3.  ANY AND ALL copyright text, watermarks, or "Google" logos, especially on streets, fields and sky, of the image.
 
-    // === UPDATED === Added instruction for aspect ratio
-    const prompt = `Analyze the provided street view image, remove parked and moving cars trucks and vehicles, pedestrians, and garbage cans and reproduce in ${styleDescription} with no text or borders. Do not remove trees, fences, or architectural features, and do not add objects. Fade gently to white at the edges for an artistic look. The final output image must have a 4:3 aspect ratio.`;
+You MUST KEEP the following:
+1.  All architectural features, buildings, flagpoles, telephone poles, trees, fences, and sidewalks.
+2.  All street signs, traffic lights, and other "urban symbols" represented accurately
+
+The final generated image MUST be 1024x768 pixels to match the 4:3 aspect ratio of the input.
+Fade the image gently to white at all edges for an artistic, vignette look.
+Do not add any new objects or text that were not in the original image.
+`;
+    // === END UPDATED PROMPT ===
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
