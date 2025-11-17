@@ -292,21 +292,38 @@ const App: React.FC = () => {
   }, isPolling ? 3000 : null); 
 
 
-  // handleDownload is unchanged
+  // === UPDATED DOWNLOAD HANDLER ===
   const handleDownload = () => {
     if (!generatedImageUrl) return;
 
+    // Check for mobile devices
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
 
     if (isMobile) {
+      // On mobile, open the image in a new tab.
+      // The user can then long-press to "Save to Photos".
       window.open(generatedImageUrl, '_blank');
     } else {
+      // On desktop, perform the file download.
       const link = document.createElement('a');
       link.href = generatedImageUrl;
-      const fileName = address.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'artwork';
-      link.download = `${fileName}_${artStyle.toLowerCase().replace(' ','_')}.png`;
+
+      // === NEW FILENAME LOGIC ===
+      // 1. Sanitize address: lowercase, replace all non-alphanumeric sequences with a single underscore
+      const addressPart = address
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_') // Replace all non-alnum sequences with one underscore
+        .replace(/^_|_$/g, '');     // Remove leading/trailing underscores
+        
+      // 2. Sanitize style: lowercase, replace spaces with underscore
+      const stylePart = artStyle.toLowerCase().replace(/ /g, '_');
+
+      // 3. Create the final filename
+      link.download = `Street-sketch_of_${addressPart}_${stylePart}.png`;
+      // === END NEW FILENAME LOGIC ===
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
