@@ -9,6 +9,6 @@
   targetPort = 3000
 
 [build.processing.secrets]
-  # Tell the scanner to ignore VITE_MAPS_API_KEY
-  # This is safe because this key is restricted to your domain
-  ignore_files = ["dist/assets/index-*.js"]
+  # This tells the scanner to allow the *value* of the
+  # VITE_MAPS_API_KEY environment variable.
+  smart_detection_omitted_values = ["VITE_MAPS_API_KEY"]
