@@ -1,7 +1,7 @@
-// src/components/App.tsx
+// src/App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 // UPDATED: All component/service paths are now correct for src/App.tsx
-import { fetchStreetViewImage, StreetViewPov } from '../services/geminiService';
+import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
 import ActionButton from './components/ActionButton';
@@ -434,7 +434,7 @@ const App: React.FC = () => {
                   onChange={setPitch} 
                   min={-90} // Up = +90
                   max={90}  // Down = -90
-                  orientation="horizontal" // Horizontal on mobile
+                  orientation="horizontal" // Horizontal on all screens
                   unitLabel="°" 
                 />
                 <PovSlider 
@@ -446,7 +446,7 @@ const App: React.FC = () => {
                   onChange={setFov} 
                   min={10} // Zoom In = 10
                   max={120} // Zoom Out = 120
-                  orientation="horizontal" // Horizontal on mobile
+                  orientation="horizontal" // Horizontal on all screens
                 />
               </div>
             </div>

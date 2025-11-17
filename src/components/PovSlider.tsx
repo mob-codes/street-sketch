@@ -11,7 +11,7 @@ interface PovSliderProps {
   min: number;
   max: number;
   step?: number;
-  orientation: 'horizontal' | 'vertical';
+  orientation: 'horizontal' | 'vertical'; // Kept prop, but only 'horizontal' is used in App.tsx
 }
 
 const PovSlider: React.FC<PovSliderProps> = ({ 
@@ -28,18 +28,8 @@ const PovSlider: React.FC<PovSliderProps> = ({
 }) => {
   const isVertical = orientation === 'vertical';
 
-  // UPDATED: Logic for inversion
-  // For Tilt: min -90, max 90. Up (rtl) goes to max (90). This is "up is up".
-  // For Zoom: min 10, max 120. Up (rtl) goes to max (120). This is "up is zoom out".
-  const sliderStyle: React.CSSProperties = isVertical ? {
-    writingMode: 'vertical-lr',
-    direction: 'rtl' // "Up" on slider goes to MAX value
-  } : {};
-
-  // UPDATED: Classes are no longer responsive
-  const sliderClasses = isVertical
-    ? "w-2 h-48 accent-indigo-600"
-    : "w-full h-2 accent-indigo-600";
+  // UPDATED: Sliders are now always horizontal
+  const sliderClasses = "w-full h-2 accent-indigo-600";
   
   const containerClasses = "w-full flex flex-col items-center";
 
@@ -48,8 +38,8 @@ const PovSlider: React.FC<PovSliderProps> = ({
 
   return (
     <div className={containerClasses}>
+      {/* UPDATED: Label is now always horizontal with icon */}
       <label htmlFor={label} className="block text-sm font-medium text-slate-700 mb-2">
-        {/* UPDATED: Label is now always horizontal */}
         <span className="flex flex-row items-center justify-center gap-2">
           {icon}
           <span>{label}</span>
@@ -65,7 +55,7 @@ const PovSlider: React.FC<PovSliderProps> = ({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className={sliderClasses}
-        style={isVertical ? sliderStyle : {}} // Only apply style if vertical
+        // No vertical styles needed
       />
     </div>
   );
