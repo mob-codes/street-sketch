@@ -5,6 +5,8 @@ interface PovSliderProps {
   label: string;
   icon: React.ReactNode;
   value: number;
+  displayValue?: string | number; // NEW: Value to show in the label
+  unitLabel?: string;             // NEW: The symbol (e.g., ° or %)
   onChange: (value: number) => void;
   min: number;
   max: number;
@@ -15,7 +17,9 @@ interface PovSliderProps {
 const PovSlider: React.FC<PovSliderProps> = ({ 
   label, 
   icon, 
-  value, 
+  value,
+  displayValue,
+  unitLabel = '°', // Default to degrees
   onChange, 
   min, 
   max, 
@@ -24,35 +28,32 @@ const PovSlider: React.FC<PovSliderProps> = ({
 }) => {
   const isVertical = orientation === 'vertical';
 
-  const sliderStyle: React.CSSProperties = isVertical ? {
-    writingMode: 'vertical-lr', // 'vertical-lr' is 'vertical, left-to-right'
-    direction: 'rtl' // This makes the slider go bottom-to-top
-  } : {};
-
+  // UPDATED:
+  // If vertical, be horizontal by default, then vertical on 'md' screens
+  // If horizontal, just be horizontal
   const sliderClasses = isVertical
-    ? "w-2 h-48 accent-indigo-600"
+    ? "w-full h-2 accent-indigo-600 md:w-2 md:h-48 md:[writing-mode:vertical-lr] md:dir-rtl"
     : "w-full h-2 accent-indigo-600";
   
+  // UPDATED:
+  // If vertical, be a standard (full-width) container on mobile,
+  // then switch to 'h-full' on desktop to fill its parent
   const containerClasses = isVertical
-    ? "flex flex-col items-center justify-start h-full"
-    : "w-full flex flex-col items-center"; // UPDATED: Added flex for horizontal centering
+    ? "flex flex-col items-center justify-start w-full md:h-full"
+    : "w-full flex flex-col items-center";
+
+  // Use the displayValue if provided, otherwise default to the actual value
+  const valueToShow = displayValue !== undefined ? displayValue : value;
 
   return (
     <div className={containerClasses}>
       <label htmlFor={label} className="block text-sm font-medium text-slate-700 mb-2">
-        {/* UPDATED: New conditional layout for labels */}
-        {isVertical ? (
-          <span className="flex flex-col items-center gap-1">
-            {icon}
-            <span>{label}</span>
-            <span className="text-slate-500">{value}°</span>
-          </span>
-        ) : (
-          <span className="flex flex-col items-center gap-1">
-            <span>{label}</span>
-            <span className="text-slate-500">{value}°</span>
-          </span>
-        )}
+        <span className="flex flex-col items-center gap-1">
+          {icon}
+          <span>{label}</span>
+          {/* UPDATED: Use valueToShow and unitLabel */}
+          <span className="text-slate-500">{valueToShow}{unitLabel}</span>
+        </span>
       </label>
       <input
         type="range"
@@ -63,7 +64,6 @@ const PovSlider: React.FC<PovSliderProps> = ({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className={sliderClasses}
-        style={sliderStyle}
       />
     </div>
   );

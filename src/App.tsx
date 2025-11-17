@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+// UPDATED: All component/service paths are now correct for src/App.tsx
 import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -56,6 +57,16 @@ function useInterval(callback: () => void, delay: number | null) {
     }
   }, [delay]);
 }
+
+// NEW: Conversion function for zoom
+const convertFovToZoomPercent = (fovValue: number) => {
+  // Input range: 120 (min zoom) to 10 (max zoom)
+  // Output range: 0% (min zoom) to 100% (max zoom)
+  const totalRange = 120 - 10;
+  const currentVal = 120 - fovValue;
+  const percent = Math.round((currentVal / totalRange) * 100);
+  return percent;
+};
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
@@ -160,8 +171,7 @@ const App: React.FC = () => {
   }, [address, heading, pitch, fov, appStep]);
 
 
-  // === UPDATED handleStylizeImage ===
-  // This now *starts* the job and *starts* polling
+  // ... (handleStylizeImage is unchanged) ...
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     
@@ -207,10 +217,9 @@ const App: React.FC = () => {
       setIsPolling(false);
     }
   }, [originalImageUrl, artStyle, generatedImageUrl]);
-  // === END OF UPDATED FUNCTION ===
 
 
-  // === NEW POLLING LOGIC ===
+  // ... (useInterval polling logic is unchanged) ...
   useInterval(() => {
     // This function runs every 3 seconds IF isPolling is true
     const checkJobStatus = async () => {
@@ -269,7 +278,6 @@ const App: React.FC = () => {
     
     checkJobStatus();
   }, isPolling ? 3000 : null); // Run every 3 seconds, or not at all
-  // === END OF NEW POLLING LOGIC ===
 
 
   // ... (handleDownload and handlePurchase are unchanged) ...
@@ -416,12 +424,14 @@ const App: React.FC = () => {
                     min={0} 
                     max={360}
                     orientation="horizontal"
+                    unitLabel="°" 
                   />
                 </div>
               </div>
 
               {/* Column 2: Vertical Sliders (side-by-side) */}
-              <div className="flex-shrink-0 flex flex-row justify-center items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
+              {/* UPDATED: This container is now responsive */}
+              <div className="flex-shrink-0 flex flex-col md:flex-row justify-center items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-5 h-5" />}
@@ -430,14 +440,17 @@ const App: React.FC = () => {
                   min={-90} 
                   max={90}
                   orientation="vertical"
+                  unitLabel="°" 
                 />
                 <PovSlider 
                   label="Zoom" 
                   icon={<Search className="w-5 h-5" />}
                   value={fov} 
+                  displayValue={convertFovToZoomPercent(fov)} 
+                  unitLabel="%" 
                   onChange={setFov} 
-                  min={10}  /* <-- THE FIX: min must be the smaller number */
-                  max={120} /* <-- THE FIX: max must be the larger number */
+                  min={10} 
+                  max={120}
                   orientation="vertical"
                 />
               </div>
