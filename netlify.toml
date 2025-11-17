@@ -5,3 +5,6 @@
 
 [dev]
   targetPort = 3000
+
+[build.processing.secrets]
+  smart_detection_omitted_values = ["VITE_MAPS_API_KEY"]
