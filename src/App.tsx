@@ -100,7 +100,8 @@ const App: React.FC = () => {
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(generatedImageUrl);
     }
-    setAddress('');
+    // UPDATED: Address is no longer cleared, to retain it in the input
+    // setAddress(''); 
     setOriginalImageUrl(null);
     setGeneratedImageUrl(null);
     setIsFetching(false);
@@ -414,7 +415,7 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                {/* Horizontal Rotate Slider (MOVED) */}
+                {/* Horizontal Rotate Slider */}
                 <div className="p-4 bg-white rounded-xl shadow-lg">
                   <PovSlider 
                     label="Rotate" 
@@ -429,9 +430,9 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Column 2: Vertical Sliders (side-by-side) */}
-              {/* UPDATED: This container is now responsive */}
-              <div className="flex-shrink-0 flex flex-col md:flex-row justify-center items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
+              {/* Column 2: Tilt and Zoom Sliders */}
+              {/* UPDATED: Container is now flex-row by default, md:flex-col for desktop */}
+              <div className="flex-shrink-0 flex flex-row md:flex-col justify-start items-center md:items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-5 h-5" />}
