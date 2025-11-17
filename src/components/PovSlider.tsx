@@ -24,10 +24,10 @@ const PovSlider: React.FC<PovSliderProps> = ({
 }) => {
   const isVertical = orientation === 'vertical';
 
-  // UPDATED: Added the style recommended by the warning
+  // UPDATED: Using the style recommended by the warning
   const sliderStyle: React.CSSProperties = isVertical ? {
-    writingMode: 'bt-lr', // 'bt-lr' is 'bottom-to-top, left-to-right'
-    WebkitAppearance: 'slider-vertical',
+    writingMode: 'vertical-lr', // 'vertical-lr' is 'vertical, left-to-right'
+    direction: 'rtl' // This makes the slider go bottom-to-top
   } : {};
 
   const sliderClasses = isVertical
@@ -59,7 +59,7 @@ const PovSlider: React.FC<PovSliderProps> = ({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className={sliderClasses}
-        style={sliderStyle} // <-- ADDED THIS
+        style={sliderStyle} // <-- UPDATED STYLE
       />
     </div>
   );

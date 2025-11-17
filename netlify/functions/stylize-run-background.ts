@@ -1,6 +1,7 @@
 // netlify/functions/stylize-run-background.ts
 import { GoogleGenAI, Modality } from "@google/genai";
-import { getStore, Context } from "@netlify/blobs"; // <-- Import Context
+import { getStore } from "@netlify/blobs"; // <-- CORRECTED
+import type { Context } from "@netlify/functions"; // <-- CORRECTED
 
 // Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {

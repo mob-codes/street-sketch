@@ -1,5 +1,6 @@
 // netlify/functions/stylize-check.ts
-import { getStore, Context } from "@netlify/blobs";
+import { getStore } from "@netlify/blobs"; // <-- CORRECTED
+import type { Context } from "@netlify/functions"; // <-- CORRECTED
 
 // NEW V2 SYNTAX
 export default async (request: Request, context: Context) => {
