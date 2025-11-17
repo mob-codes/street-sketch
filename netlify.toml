@@ -5,8 +5,3 @@
 
 [dev]
   targetPort = 3000
-
-# This block tells the scanner to allow the *value* of the
-# VITE_MAPS_API_KEY environment variable to be public.
-[build.processing.secrets]
-  smart_detection_omitted_values = ["VITE_MAPS_API_KEY"]
