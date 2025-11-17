@@ -55,7 +55,7 @@ export default async (request: Request, context: Context) => {
         styleDescription = 'transform the result into a vibrant and artistic watercolor painting...';
         break;
     }
-    const prompt = `Analyze the provided street view image... ${styleDescription} ...with no text or borders.`; // (Use your full prompt)
+    const prompt = `Analyze the provided street view image, remove parked and moving cars trucks and vehicles, pedestrians, and garbage cans and reproduce in ${styleDescription} with no text or borders. Do not remove trees, fences, or architectural features, and do not add objects. Fade gently to white at the edges for an artistic look`; // (Use your full prompt)
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
