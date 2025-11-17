@@ -1,7 +1,7 @@
-// src/App.tsx
+// src/components/App.tsx
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 // UPDATED: All component/service paths are now correct for src/App.tsx
-import { fetchStreetViewImage, StreetViewPov } from './services/geminiService';
+import { fetchStreetViewImage, StreetViewPov } from '../services/geminiService';
 import AddressInputForm from './components/AddressInputForm';
 import LoadingSpinner from './components/LoadingSpinner';
 import ActionButton from './components/ActionButton';
@@ -390,57 +390,51 @@ const App: React.FC = () => {
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
             
-            <div className="flex flex-col md:flex-row gap-6 justify-center">
+            {/* UPDATED: Main container is now single column */}
+            <div className="flex flex-col gap-6 justify-center">
 
-              {/* Column 1: Image and Rotate Slider */}
-              <div className="flex-1 flex flex-col gap-6 min-w-0">
-                {/* Image Container */}
-                <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
-                  {originalImageUrl && (
-                    <img 
-                      src={originalImageUrl} 
-                      alt="Original Street View" 
-                      className="w-full h-full object-cover"
-                      onLoad={() => setIsFetching(false)}
-                      onError={() => {
-                        setError("Could not find a Street View image for this address.");
-                        setIsFetching(false);
-                      }}
-                    />
-                  )}
-                  {isFetching && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Horizontal Rotate Slider */}
-                <div className="p-4 bg-white rounded-xl shadow-lg">
-                  <PovSlider 
-                    label="Rotate" 
-                    icon={<ArrowLeftRight className="w-4 h-4" />}
-                    value={heading} 
-                    onChange={setHeading} 
-                    min={0} 
-                    max={360}
-                    orientation="horizontal"
-                    unitLabel="°" 
+              {/* Box 1: Image */}
+              <div className="relative w-full aspect-video bg-slate-200 rounded-xl shadow-lg border-4 border-white overflow-hidden">
+                {originalImageUrl && (
+                  <img 
+                    src={originalImageUrl} 
+                    alt="Original Street View" 
+                    className="w-full h-full object-cover"
+                    onLoad={() => setIsFetching(false)}
+                    onError={() => {
+                      setError("Could not find a Street View image for this address.");
+                      setIsFetching(false);
+                    }}
                   />
-                </div>
+                )}
+                {isFetching && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                )}
               </div>
 
-              {/* Column 2: Tilt and Zoom Sliders */}
-              {/* UPDATED: Container is now flex-row by default, md:flex-col for desktop */}
-              <div className="flex-shrink-0 flex flex-row md:flex-col justify-start items-center md:items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
+              {/* Box 2: All Sliders (Stacked) */}
+              {/* UPDATED: This is now a single container for all 3 sliders */}
+              <div className="flex flex-col justify-center items-center gap-6 p-4 bg-white rounded-xl shadow-lg">
+                <PovSlider 
+                  label="Rotate" 
+                  icon={<ArrowLeftRight className="w-5 h-5" />} // Added icon
+                  value={heading} 
+                  onChange={setHeading} 
+                  min={0} 
+                  max={360}
+                  orientation="horizontal" // Always horizontal
+                  unitLabel="°" 
+                />
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-5 h-5" />}
                   value={pitch} 
                   onChange={setPitch} 
-                  min={-90} 
-                  max={90}
-                  orientation="vertical"
+                  min={-90} // Up = +90
+                  max={90}  // Down = -90
+                  orientation="horizontal" // Horizontal on mobile
                   unitLabel="°" 
                 />
                 <PovSlider 
@@ -450,9 +444,9 @@ const App: React.FC = () => {
                   displayValue={convertFovToZoomPercent(fov)} 
                   unitLabel="%" 
                   onChange={setFov} 
-                  min={10} 
-                  max={120}
-                  orientation="vertical"
+                  min={10} // Zoom In = 10
+                  max={120} // Zoom Out = 120
+                  orientation="horizontal" // Horizontal on mobile
                 />
               </div>
             </div>
