@@ -422,11 +422,10 @@ const App: React.FC = () => {
               </div>
 
               {/* Column 2: Vertical Sliders (side-by-side) */}
-              {/* UPDATED: Removed md:flex-col, added min-w-72 */}
-              <div className="flex-shrink-0 flex flex-row justify-center items-start gap-8 p-4 bg-white rounded-xl shadow-lg min-w-72">
+              <div className="flex-shrink-0 flex flex-row justify-center items-start gap-6 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Tilt" 
-                  icon={<MoveVertical className="w-4 h-4" />}
+                  icon={<MoveVertical className="w-5 h-5" />}
                   value={pitch} 
                   onChange={setPitch} 
                   min={-90} 
@@ -435,27 +434,23 @@ const App: React.FC = () => {
                 />
                 <PovSlider 
                   label="Zoom" 
-                  icon={<Search className="w-4 h-4" />}
+                  icon={<Search className="w-5 h-5" />}
                   value={fov} 
                   onChange={setFov} 
-                  min={120} /* UPDATED: Inverted Zoom */
-                  max={10}  /* UPDATED: Inverted Zoom */
+                  min={10}  /* <-- THE FIX: min must be the smaller number */
+                  max={120} /* <-- THE FIX: max must be the larger number */
                   orientation="vertical"
                 />
               </div>
             </div>
             
-            {/* Step 3: Style Options */}
-            {/* UPDATED: Moved CTA inside this block */}
+            {/* === STEP 3: RE-ORDERED === */}
             <div className="mt-8 bg-white rounded-xl shadow-lg p-6 sm:p-8">
+              {/* 1. Title */}
               <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 3: Choose Your Style</h3>
-              <FilterOptions 
-                selectedStyle={artStyle} 
-                onStyleChange={setArtStyle} 
-                isLoading={isLoading}
-              />
-              {/* Main CTA - MOVED HERE */}
-              <div className="mt-6 flex justify-center border-t border-slate-200 pt-6">
+              
+              {/* 2. Stylize CTA (MOVED UP) */}
+              <div className="mt-6 flex justify-center">
                 <ActionButton
                   onClick={handleStylizeImage}
                   text={`Stylize in ${artStyle}!`}
@@ -464,12 +459,18 @@ const App: React.FC = () => {
                   disabled={isStylizing || isFetching}
                 />
               </div>
+
+              {/* 3. Style Options (MOVED DOWN) */}
+              <FilterOptions 
+                selectedStyle={artStyle} 
+                onStyleChange={setArtStyle} 
+                isLoading={isLoading}
+              />
             </div>
 
-            {/* Main CTA - REMOVED FROM HERE */}
           </div>
         )}
-        {/* === END OF STEP 2 (FRAMING) === */}
+        {/* === END OF STEP 2/3 (FRAMING) === */}
 
         {/* Generating Spinner (Unchanged, but text is updated) */}
         {appStep === 'generating' && (
@@ -559,8 +560,7 @@ const App: React.FC = () => {
                 onClick={handleStartOver}
                 text="Start Over"
                 icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-                /* UPDATED: Changed color to indigo for consistency */
-                className="bg-indigo-600 text-white hover:bg-indigo-700"
+                className="bg-indigo-600 hover:bg-indigo-700"
                 disabled={isPurchasing}
               />
             </div>

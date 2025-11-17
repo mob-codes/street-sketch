@@ -24,7 +24,6 @@ const PovSlider: React.FC<PovSliderProps> = ({
 }) => {
   const isVertical = orientation === 'vertical';
 
-  // UPDATED: Using the style recommended by the warning
   const sliderStyle: React.CSSProperties = isVertical ? {
     writingMode: 'vertical-lr', // 'vertical-lr' is 'vertical, left-to-right'
     direction: 'rtl' // This makes the slider go bottom-to-top
@@ -36,20 +35,24 @@ const PovSlider: React.FC<PovSliderProps> = ({
   
   const containerClasses = isVertical
     ? "flex flex-col items-center justify-start h-full"
-    : "w-full";
-  
-  const labelContainerClasses = isVertical
-    ? "flex flex-col items-center gap-1"
-    : "flex items-center gap-1";
+    : "w-full flex flex-col items-center"; // UPDATED: Added flex for horizontal centering
 
   return (
     <div className={containerClasses}>
       <label htmlFor={label} className="block text-sm font-medium text-slate-700 mb-2">
-        <span className={labelContainerClasses}>
-          {icon}
-          {/* FIX: Added min-w-24 to stop layout bounce */}
-          <span className="min-w-24 text-center">{label} ({value}°)</span>
-        </span>
+        {/* UPDATED: New conditional layout for labels */}
+        {isVertical ? (
+          <span className="flex flex-col items-center gap-1">
+            {icon}
+            <span>{label}</span>
+            <span className="text-slate-500">{value}°</span>
+          </span>
+        ) : (
+          <span className="flex flex-col items-center gap-1">
+            <span>{label}</span>
+            <span className="text-slate-500">{value}°</span>
+          </span>
+        )}
       </label>
       <input
         type="range"
