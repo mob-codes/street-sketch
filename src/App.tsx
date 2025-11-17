@@ -82,8 +82,12 @@ const convertZoomPercentToFov = (percent: number) => {
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
   const [originalImageUrl, setOriginalImageUrl] = useState<string | null>(null);
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   
+  // === REFACTOR: Store both blob URL (for display) and data URL (for purchase) ===
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null); // This will be the blob: URL
+  const [generatedDataUrl, setGeneratedDataUrl] = useState<string | null>(null); // This will be the data: URL
+  // === END REFACTOR ===
+
   const [isFetching, setIsFetching] = useState<boolean>(false);
   const [isStylizing, setIsStylizing] = useState<boolean>(false); // This is now the "generating" state
   const [isPurchasing, setIsPurchasing] = useState<boolean>(false);
@@ -96,14 +100,11 @@ const App: React.FC = () => {
   const [heading, setHeading] = useState(90);
   const [pitch, setPitch] = useState(0);
   const [fov, setFov] = useState(120);
-  // NEW state for the zoom slider
   const [zoomPercent, setZoomPercent] = useState(0); 
 
-  // === NEW STATE FOR POLLING ===
   const [jobId, setJobId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState<boolean>(false);
   const pollCountRef = useRef<number>(0);
-  // === END OF NEW STATE ===
 
   const step2Ref = useRef<HTMLDivElement>(null);
   const finalResultRef = useRef<HTMLDivElement>(null);
@@ -113,10 +114,9 @@ const App: React.FC = () => {
     if (generatedImageUrl && generatedImageUrl.startsWith('blob:')) {
       URL.revokeObjectURL(generatedImageUrl);
     }
-    // UPDATED: Address is no longer cleared, to retain it in the input
-    // setAddress(''); 
     setOriginalImageUrl(null);
     setGeneratedImageUrl(null);
+    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
     setIsFetching(false);
     setIsStylizing(false);
     setIsPurchasing(false);
@@ -133,6 +133,7 @@ const App: React.FC = () => {
       URL.revokeObjectURL(generatedImageUrl);
     }
     setGeneratedImageUrl(null);
+    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
     setAppStep('framing'); 
     setError(null);
     setJobId(null); // Clear job
@@ -144,7 +145,6 @@ const App: React.FC = () => {
   };
 
 
-  // ... (handleAddressSubmit and useEffect for fetchStreetViewImage are unchanged) ...
   const handleAddressSubmit = useCallback(async (newAddress: string) => {
     console.log('[App.tsx] handleAddressSubmit called with:', newAddress);
     if (!newAddress.trim()) {
@@ -157,17 +157,18 @@ const App: React.FC = () => {
     setIsFetching(true);
     setError(null);
     setGeneratedImageUrl(null);
+    setGeneratedDataUrl(null); // <-- REFACTOR: Clear data URL
     setOriginalImageUrl(null);
     setAppStep('framing'); 
     setHeading(90);
     setPitch(0);
     setFov(120);
-    setZoomPercent(0); // <-- UPDATED: Reset zoom slider state
+    setZoomPercent(0); 
     setAddress(newAddress);
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
-  }, [generatedImageUrl]);
+  }, [generatedImageUrl]); // Keep generatedImageUrl dependency for revokeObjectURL
 
   useEffect(() => {
     if (appStep === 'framing' && address) {
@@ -186,7 +187,7 @@ const App: React.FC = () => {
   }, [address, heading, pitch, fov, appStep]);
 
 
-  // ... (handleStylizeImage is unchanged) ...
+  // handleStylizeImage is unchanged
   const handleStylizeImage = useCallback(async () => {
     if (!originalImageUrl) return;
     
@@ -198,54 +199,48 @@ const App: React.FC = () => {
     const newJobId = crypto.randomUUID(); // Generate a unique ID on the client
     setJobId(newJobId);
     setAppStep('generating'); 
-    setIsStylizing(true); // This shows the spinner
-    setIsPolling(true); // This starts the polling interval
-    pollCountRef.current = 0; // Reset poll count
+    setIsStylizing(true); 
+    setIsPolling(true); 
+    pollCountRef.current = 0; 
     setError(null);
 
     try {
-      // Call the NEW background function
       const response = await fetch('/.netlify/functions/stylize-run-background', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           streetViewUrl: originalImageUrl,
           artStyle: artStyle,
-          jobId: newJobId, // Send the job ID
+          jobId: newJobId, 
         }),
       });
 
-      // A 202 "Accepted" response is expected from a background function
       if (response.status !== 202) {
         throw new Error("Failed to start the image generation job.");
       }
       
       console.log('Job started successfully. Now polling...');
-      // Polling will handle the rest (see the useInterval hook)
 
     } catch (e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred.';
       setError(`Failed to start the job: ${errorMessage}`);
-      setAppStep('framing'); // Go back to framing step
+      setAppStep('framing');
       setIsStylizing(false);
       setIsPolling(false);
     }
-  }, [originalImageUrl, artStyle, generatedImageUrl]);
+  }, [originalImageUrl, artStyle, generatedImageUrl]); // Keep generatedImageUrl
 
 
-  // ... (useInterval polling logic is unchanged) ...
   useInterval(() => {
-    // This function runs every 3 seconds IF isPolling is true
     const checkJobStatus = async () => {
       if (!jobId) {
         setIsPolling(false);
         return;
       }
       
-      pollCountRef.current += 1; // Increment poll count
+      pollCountRef.current += 1; 
 
-      // Timeout after 40 polls (2 minutes)
       if (pollCountRef.current > 40) {
         setIsPolling(false);
         setIsStylizing(false);
@@ -257,7 +252,6 @@ const App: React.FC = () => {
       try {
         const response = await fetch(`/.netlify/functions/stylize-check?jobId=${jobId}`);
         
-        // If status is 200, the job is complete
         if (response.status === 200) {
           const data = await response.json();
           if (data.status === 'complete') {
@@ -265,9 +259,15 @@ const App: React.FC = () => {
             setIsPolling(false);
             setIsStylizing(false);
             
-            const blob = dataURLtoBlob(data.generatedUrl);
+            // === REFACTOR: Save both dataURL and blobUrl ===
+            const dataUrl = data.generatedUrl; // This is the data: URL
+            const blob = dataURLtoBlob(dataUrl);
             const blobUrl = URL.createObjectURL(blob);
-            setGeneratedImageUrl(blobUrl);
+            
+            setGeneratedDataUrl(dataUrl); // <-- Save the data URL
+            setGeneratedImageUrl(blobUrl); // <-- Save the blob URL (for display/download)
+            // === END REFACTOR ===
+
             setAppStep('done');
             
             setTimeout(() => {
@@ -275,7 +275,6 @@ const App: React.FC = () => {
             }, 100);
           }
         } else if (response.status === 500) {
-          // The job failed
           const data = await response.json();
           console.error("Polling error: Job failed", data.message);
           setIsPolling(false);
@@ -283,33 +282,27 @@ const App: React.FC = () => {
           setAppStep('framing');
           setError(`Image generation failed: ${data.message}`);
         }
-        // If status is 202, we just keep polling (do nothing)
         
       } catch (e) {
         console.error("Polling request failed:", e);
-        // Don't stop polling on a single failed network request, just try again
       }
     };
     
     checkJobStatus();
-  }, isPolling ? 3000 : null); // Run every 3 seconds, or not at all
+  }, isPolling ? 3000 : null); 
 
 
-  // === UPDATED DOWNLOAD HANDLER ===
+  // handleDownload is unchanged
   const handleDownload = () => {
     if (!generatedImageUrl) return;
 
-    // Check for mobile devices
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
       navigator.userAgent
     );
 
     if (isMobile) {
-      // On mobile, open the image in a new tab.
-      // The user can then long-press to "Save to Photos".
       window.open(generatedImageUrl, '_blank');
     } else {
-      // On desktop, perform the file download as before.
       const link = document.createElement('a');
       link.href = generatedImageUrl;
       const fileName = address.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'artwork';
@@ -320,33 +313,20 @@ const App: React.FC = () => {
     }
   };
   
-  // ... (handlePurchase is unchanged) ...
+  // === REFACTOR: handlePurchase is now much simpler ===
   const handlePurchase = async () => {
-    if (!generatedImageUrl) return;
+    // Use the data URL directly
+    if (!generatedDataUrl) return; 
+
     setIsPurchasing(true);
     setError(null);
-    let dataUrlForPurchase: string;
-    try {
-        const blobResponse = await fetch(generatedImageUrl);
-        const blob = await blobResponse.blob();
-        dataUrlForPurchase = await new Promise((resolve, reject) => {
-             const reader = new FileReader();
-             reader.onloadend = () => resolve(reader.result as string);
-             reader.onerror = reject;
-             reader.readAsDataURL(blob);
-        });
-    } catch (e) {
-         console.error('Failed to convert blob back to data URL for purchase:', e);
-         setError('Purchase failed. Please try again.');
-         setIsPurchasing(false);
-         return;
-    }
+    
     try {
       const response = await fetch('/.netlify/functions/create-printful-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl: dataUrlForPurchase,
+          imageUrl: generatedDataUrl, // <-- Send the data URL
           variantId: selectedVariantId,
         }),
       });
@@ -367,6 +347,7 @@ const App: React.FC = () => {
       setIsPurchasing(false);
     }
   };
+  // === END REFACTOR ===
 
 
   const isLoading = isFetching || isStylizing;
@@ -398,7 +379,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 1: Choose a Location</h3>
             <AddressInputForm 
-              initialValue={address} // <-- This will pass the address back to the input
+              initialValue={address} 
               onSubmit={handleAddressSubmit} 
               isLoading={isFetching} 
               buttonText="Locate"
