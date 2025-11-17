@@ -422,7 +422,8 @@ const App: React.FC = () => {
               </div>
 
               {/* Column 2: Vertical Sliders (side-by-side) */}
-              <div className="flex-shrink-0 flex flex-row md:flex-col justify-center items-start gap-8 p-4 bg-white rounded-xl shadow-lg">
+              {/* UPDATED: Removed md:flex-col, added min-w-72 */}
+              <div className="flex-shrink-0 flex flex-row justify-center items-start gap-8 p-4 bg-white rounded-xl shadow-lg min-w-72">
                 <PovSlider 
                   label="Tilt" 
                   icon={<MoveVertical className="w-4 h-4" />}
@@ -437,14 +438,15 @@ const App: React.FC = () => {
                   icon={<Search className="w-4 h-4" />}
                   value={fov} 
                   onChange={setFov} 
-                  min={10} 
-                  max={120}
+                  min={120} /* UPDATED: Inverted Zoom */
+                  max={10}  /* UPDATED: Inverted Zoom */
                   orientation="vertical"
                 />
               </div>
             </div>
             
             {/* Step 3: Style Options */}
+            {/* UPDATED: Moved CTA inside this block */}
             <div className="mt-8 bg-white rounded-xl shadow-lg p-6 sm:p-8">
               <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 3: Choose Your Style</h3>
               <FilterOptions 
@@ -452,18 +454,19 @@ const App: React.FC = () => {
                 onStyleChange={setArtStyle} 
                 isLoading={isLoading}
               />
+              {/* Main CTA - MOVED HERE */}
+              <div className="mt-6 flex justify-center border-t border-slate-200 pt-6">
+                <ActionButton
+                  onClick={handleStylizeImage}
+                  text={`Stylize in ${artStyle}!`}
+                  icon={<Wand2 className="w-5 h-5 mr-2" />}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                  disabled={isStylizing || isFetching}
+                />
+              </div>
             </div>
 
-            {/* Main CTA */}
-            <div className="mt-6 flex justify-center">
-              <ActionButton
-                onClick={handleStylizeImage}
-                text={`Stylize in ${artStyle}!`}
-                icon={<Wand2 className="w-5 h-5 mr-2" />}
-                className="bg-indigo-600 hover:bg-indigo-700"
-                disabled={isStylizing || isFetching}
-              />
-            </div>
+            {/* Main CTA - REMOVED FROM HERE */}
           </div>
         )}
         {/* === END OF STEP 2 (FRAMING) === */}
@@ -479,7 +482,7 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Step 4: Final Result (Unchanged) */}
+        {/* === STEP 4 (DONE) - REORDERED === */}
         {appStep === 'done' && generatedImageUrl && (
           <div className="mt-8 animate-fade-in" ref={finalResultRef}>
             <div className="flex flex-col items-center w-full max-w-3xl mx-auto">
@@ -491,15 +494,29 @@ const App: React.FC = () => {
               />
             </div>
             
+            {/* 1. Download Button */}
+            <div className="mt-8 flex justify-center">
+              <ActionButton
+                onClick={handleDownload}
+                text="Download for Free"
+                icon={<Download className="w-5 h-5 mr-2" />}
+                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={isPurchasing}
+              />
+            </div>
+
+            {/* 2. Select Product */}
             <div className="mt-6 max-w-sm mx-auto">
-              <label htmlFor="product" className="block text-sm font-medium text-slate-700">
+              {/* UPDATED: Added text-center to label */}
+              <label htmlFor="product" className="block text-sm font-medium text-slate-700 text-center">
                 Select Product
               </label>
               <select
                 id="product"
                 name="product"
                 disabled={isPurchasing}
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md shadow-sm"
+                /* UPDATED: Added select-text-center class */
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md shadow-sm select-text-center"
                 value={selectedVariantId}
                 onChange={(e) => setSelectedVariantId(Number(e.target.value))}
               >
@@ -511,14 +528,8 @@ const App: React.FC = () => {
               </select>
             </div>
             
-            <div className="mt-6 flex flex-col sm:flex-row justify-center items-center gap-4">
-              <ActionButton
-                onClick={handleDownload}
-                text="Download for Free"
-                icon={<Download className="w-5 h-5 mr-2" />}
-                className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={isPurchasing}
-              />
+            {/* 3. Purchase Button */}
+            <div className="mt-6 flex justify-center">
               <ActionButton
                 onClick={handlePurchase}
                 text={isPurchasing ? "Creating Order..." : "Purchase Print"}
@@ -534,25 +545,29 @@ const App: React.FC = () => {
               />
             </div>
             
+            {/* 4. Recapture / Start Over Buttons */}
             <div className="mt-8 text-center flex flex-col sm:flex-row justify-center gap-4">
               <ActionButton
                 onClick={handleRecapture}
                 text="Recapture"
                 icon={<Camera className="w-4 h-4 mr-2" />}
-                className="bg-slate-200 text-slate-800 hover:bg-slate-300"
+                /* UPDATED: Changed color to indigo */
+                className="bg-indigo-600 text-white hover:bg-indigo-700"
                 disabled={isPurchasing}
               />
               <ActionButton
                 onClick={handleStartOver}
                 text="Start Over"
                 icon={<RefreshCcw className="w-4 h-4 mr-2" />}
-                className="bg-indigo-600 hover:bg-indigo-700"
+                /* UPDATED: Changed color to indigo for consistency */
+                className="bg-indigo-600 text-white hover:bg-indigo-700"
                 disabled={isPurchasing}
               />
             </div>
 
           </div>
         )}
+        {/* === END OF STEP 4 === */}
 
       </main>
       

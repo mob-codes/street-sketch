@@ -1,2 +1,9 @@
 /* src/index.css */
 @import "tailwindcss";
+
+/* Add this class to center the selected
+  option text in a <select> dropdown.
+*/
+.select-text-center {
+  text-align-last: center;
+}

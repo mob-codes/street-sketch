@@ -47,7 +47,8 @@ const PovSlider: React.FC<PovSliderProps> = ({
       <label htmlFor={label} className="block text-sm font-medium text-slate-700 mb-2">
         <span className={labelContainerClasses}>
           {icon}
-          <span>{label} ({value}°)</span>
+          {/* FIX: Added min-w-24 to stop layout bounce */}
+          <span className="min-w-24 text-center">{label} ({value}°)</span>
         </span>
       </label>
       <input
@@ -59,7 +60,7 @@ const PovSlider: React.FC<PovSliderProps> = ({
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
         className={sliderClasses}
-        style={sliderStyle} // <-- UPDATED STYLE
+        style={sliderStyle}
       />
     </div>
   );
