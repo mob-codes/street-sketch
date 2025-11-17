@@ -58,7 +58,8 @@ function useInterval(callback: () => void, delay: number | null) {
   }, [delay]);
 }
 
-// NEW: Conversion function for zoom
+// === UPDATED ZOOM LOGIC ===
+// Converts API FOV (120-10) to a user-facing percentage (0-100)
 const convertFovToZoomPercent = (fovValue: number) => {
   // Input range: 120 (min zoom) to 10 (max zoom)
   // Output range: 0% (min zoom) to 100% (max zoom)
@@ -67,6 +68,16 @@ const convertFovToZoomPercent = (fovValue: number) => {
   const percent = Math.round((currentVal / totalRange) * 100);
   return percent;
 };
+
+// Converts user-facing percentage (0-100) back to API FOV (120-10)
+const convertZoomPercentToFov = (percent: number) => {
+  // Input range: 0% (min zoom) to 100% (max zoom)
+  // Output range: 120 (min zoom) to 10 (max zoom)
+  const fovRange = 120 - 10;
+  const fovValue = 120 - (percent / 100) * fovRange;
+  return Math.round(fovValue);
+};
+// === END UPDATED ZOOM LOGIC ===
 
 const App: React.FC = () => {
   const [address, setAddress] = useState<string>('');
@@ -85,6 +96,8 @@ const App: React.FC = () => {
   const [heading, setHeading] = useState(90);
   const [pitch, setPitch] = useState(0);
   const [fov, setFov] = useState(120);
+  // NEW state for the zoom slider
+  const [zoomPercent, setZoomPercent] = useState(0); 
 
   // === NEW STATE FOR POLLING ===
   const [jobId, setJobId] = useState<string | null>(null);
@@ -149,6 +162,7 @@ const App: React.FC = () => {
     setHeading(90);
     setPitch(0);
     setFov(120);
+    setZoomPercent(0); // <-- UPDATED: Reset zoom slider state
     setAddress(newAddress);
     setTimeout(() => {
       step2Ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -281,18 +295,32 @@ const App: React.FC = () => {
   }, isPolling ? 3000 : null); // Run every 3 seconds, or not at all
 
 
-  // ... (handleDownload and handlePurchase are unchanged) ...
+  // === UPDATED DOWNLOAD HANDLER ===
   const handleDownload = () => {
     if (!generatedImageUrl) return;
-    const link = document.createElement('a');
-    link.href = generatedImageUrl;
-    const fileName = address.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'artwork';
-    link.download = `${fileName}_${artStyle.toLowerCase().replace(' ','_')}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    // Check for mobile devices
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+      navigator.userAgent
+    );
+
+    if (isMobile) {
+      // On mobile, open the image in a new tab.
+      // The user can then long-press to "Save to Photos".
+      window.open(generatedImageUrl, '_blank');
+    } else {
+      // On desktop, perform the file download as before.
+      const link = document.createElement('a');
+      link.href = generatedImageUrl;
+      const fileName = address.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'artwork';
+      link.download = `${fileName}_${artStyle.toLowerCase().replace(' ','_')}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
   
+  // ... (handlePurchase is unchanged) ...
   const handlePurchase = async () => {
     if (!generatedImageUrl) return;
     setIsPurchasing(true);
@@ -365,11 +393,12 @@ const App: React.FC = () => {
       )}
       
       <main className="w-full max-w-4xl">
-        {/* --- STEP 1 (Unchanged) --- */}
+        {/* --- STEP 1 (Address persistence will be added here) --- */}
         {(appStep === 'initial' || appStep === 'framing') && (
           <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 1: Choose a Location</h3>
             <AddressInputForm 
+              initialValue={address} // <-- This will pass the address back to the input
               onSubmit={handleAddressSubmit} 
               isLoading={isFetching} 
               buttonText="Locate"
@@ -385,12 +414,11 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* === STEP 2 (FRAMING) - UI FIXES APPLIED === */}
+        {/* === STEP 2 (FRAMING) === */}
         {appStep === 'framing' && (
           <div className="mt-8 animate-fade-in" ref={step2Ref}>
             <h3 className="text-lg font-semibold text-slate-700 mb-3 text-center">Step 2: Frame Your Shot</h3>
             
-            {/* UPDATED: Main container is now single column */}
             <div className="flex flex-col gap-6 justify-center">
 
               {/* Box 1: Image */}
@@ -415,16 +443,15 @@ const App: React.FC = () => {
               </div>
 
               {/* Box 2: All Sliders (Stacked) */}
-              {/* UPDATED: This is now a single container for all 3 sliders */}
               <div className="flex flex-col justify-center items-center gap-6 p-4 bg-white rounded-xl shadow-lg">
                 <PovSlider 
                   label="Rotate" 
-                  icon={<ArrowLeftRight className="w-5 h-5" />} // Added icon
+                  icon={<ArrowLeftRight className="w-5 h-5" />} 
                   value={heading} 
                   onChange={setHeading} 
                   min={0} 
                   max={360}
-                  orientation="horizontal" // Always horizontal
+                  orientation="horizontal" 
                   unitLabel="°" 
                 />
                 <PovSlider 
@@ -432,22 +459,27 @@ const App: React.FC = () => {
                   icon={<MoveVertical className="w-5 h-5" />}
                   value={pitch} 
                   onChange={setPitch} 
-                  min={-90} // Up = +90
-                  max={90}  // Down = -90
-                  orientation="horizontal" // Horizontal on all screens
+                  min={-90}
+                  max={90}
+                  orientation="horizontal"
                   unitLabel="°" 
                 />
+                {/* === UPDATED ZOOM SLIDER === */}
                 <PovSlider 
                   label="Zoom" 
                   icon={<Search className="w-5 h-5" />}
-                  value={fov} 
-                  displayValue={convertFovToZoomPercent(fov)} 
+                  value={zoomPercent} 
+                  displayValue={zoomPercent} 
                   unitLabel="%" 
-                  onChange={setFov} 
-                  min={10} // Zoom In = 10
-                  max={120} // Zoom Out = 120
-                  orientation="horizontal" // Horizontal on all screens
+                  onChange={(newPercent) => {
+                    setZoomPercent(newPercent);
+                    setFov(convertZoomPercentToFov(newPercent));
+                  }} 
+                  min={0} // 0% on the left
+                  max={100} // 100% on the right
+                  orientation="horizontal"
                 />
+                {/* === END UPDATED ZOOM SLIDER === */}
               </div>
             </div>
             

@@ -1,14 +1,16 @@
 // netlify/functions/stylize-run-background.ts
 import { GoogleGenAI, Modality } from "@google/genai";
-import { getStore } from "@netlify/blobs"; // <-- CORRECTED
-import type { Context } from "@netlify/functions"; // <-- CORRECTED
+import { getStore } from "@netlify/blobs"; 
+import type { Context } from "@netlify/functions"; 
 
 // Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
   const response = await fetch(url);
   if (!response.ok) { throw new Error(`Failed to fetch image: ${response.status}`); }
   const blob = await response.blob();
+  // This check is very smart.
   if (blob.type === 'image/png' && blob.size < 20000) {
+    // This is the error we will catch below
     throw new Error("404: No Street View imagery available.");
   }
   const arrayBuffer = await blob.arrayBuffer();
@@ -33,7 +35,7 @@ export default async (request: Request, context: Context) => {
   
   try {
     const { streetViewUrl, artStyle, jobId: reqJobId } = await request.json();
-    jobId = reqJobId; // Store jobId for the catch block
+    jobId = reqJobId; 
 
     if (!streetViewUrl || !artStyle || !jobId) {
       return new Response(JSON.stringify({ error: "Missing streetViewUrl, artStyle, or jobId" }), { status: 400 });
@@ -67,7 +69,6 @@ export default async (request: Request, context: Context) => {
       if (part.inlineData) {
         const generatedUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         
-        // Get store using the v2 context
         const store = getStore("stylized-images");
         await store.setJSON(jobId, {
           status: "complete",
@@ -82,18 +83,26 @@ export default async (request: Request, context: Context) => {
 
   } catch (error) {
     console.error("Error in stylize-run function:", error);
+    
+    // --- THIS IS THE SUGGESTED CHANGE ---
+    let errorMessage = error instanceof Error ? error.message : "Unknown server error";
+    // Check for our specific "image not found" error
+    if (errorMessage.startsWith("404:")) {
+        errorMessage = "We couldn't find Street View imagery for that address. Please try a nearby address or intersection.";
+    }
+    // --- END OF CHANGE ---
+
     if (jobId) {
       try {
         const store = getStore("stylized-images");
         await store.setJSON(jobId, {
           status: "error",
-          message: error instanceof Error ? error.message : "Unknown server error"
+          message: errorMessage // <-- This now sends the user-friendly message
         });
       } catch (storeError) {
         console.error("Failed to even write error to blob store:", storeError);
       }
     }
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown server error" }), { status: 500 });
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
   }
 };
-// === END V2 SYNTAX ===
