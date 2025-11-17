@@ -1,14 +1,12 @@
 # netlify.toml
 
 [build]
-  # This tells Netlify where your serverless functions are
   functions = "netlify/functions"
 
 [dev]
-  # Tell Netlify that your Vite server runs on port 3000
   targetPort = 3000
 
+# This block tells the scanner to allow the *value* of the
+# VITE_MAPS_API_KEY environment variable to be public.
 [build.processing.secrets]
-  # This tells the scanner to allow the *value* of the
-  # VITE_MAPS_API_KEY environment variable.
   smart_detection_omitted_values = ["VITE_MAPS_API_KEY"]
