@@ -3,6 +3,11 @@ import { GoogleGenAI, Modality } from "@google/genai";
 import { getStore } from "@netlify/blobs"; 
 import type { Context } from "@netlify/functions"; 
 
+const getStoreName = () => {
+  const context = process.env.CONTEXT || 'dev';
+  return `stylized-images-${context}`;
+}
+
 // Node.js method to convert image URL to base64
 const imageUrlToBase64 = async (url: string): Promise<{ base64: string, mimeType: string }> => {
   const response = await fetch(url);
@@ -88,7 +93,7 @@ Do not add any new objects or text that were not in the original image.
       if (part.inlineData) {
         const generatedUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         
-        const store = getStore("stylized-images");
+        const store = getStore(getStoreName());
         await store.setJSON(jobId, {
           status: "complete",
           generatedUrl: generatedUrl
@@ -110,7 +115,7 @@ Do not add any new objects or text that were not in the original image.
 
     if (jobId) {
       try {
-        const store = getStore("stylized-images");
+        const store = getStore(getStoreName());
         await store.setJSON(jobId, {
           status: "error",
           message: errorMessage 

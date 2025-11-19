@@ -2,6 +2,11 @@
 import { getStore } from "@netlify/blobs";
 import type { Context } from "@netlify/functions";
 
+const getStoreName = () => {
+  const context = process.env.CONTEXT || 'dev';
+  return `stylized-images-${context}`;
+}
+
 // NEW V2 SYNTAX
 export default async (request: Request, context: Context) => {
   const url = new URL(request.url);
@@ -12,7 +17,7 @@ export default async (request: Request, context: Context) => {
   }
 
   // Get store using the v2 context
-  const store = getStore("stylized-images");
+  const store = getStore(getStoreName());
   
   // === THIS IS THE FIX ===
   // It's not store.getJSON(jobId, ...), it's store.get(jobId, ...)
