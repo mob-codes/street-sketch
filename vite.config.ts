@@ -14,7 +14,7 @@ const getHostname = (url: string) => {
 
 export default defineConfig(({ mode }) => {
     const deployPrimeUrl = process.env.DEPLOY_PRIME_URL;
-    const allowedHosts: string[] = [];
+    const allowedHosts: string[] = ['devserver-main--street-sketch.netlify.app'];
 
     if (deployPrimeUrl) {
       const hostname = getHostname(deployPrimeUrl);
