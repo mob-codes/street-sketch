@@ -1,17 +1,16 @@
 # netlify.toml
 
 [build]
-  # 1. The Command: This compiles your TypeScript/React into static HTML/JS
+  # Tells Netlify to build your React app
   command = "npm run build"
   
-  # 2. The Output: This is the folder Vite creates that Netlify should serve
+  # Tells Netlify the folder to serve (Vite creates 'dist')
   publish = "dist"
   
-  # 3. The Backend: Where your serverless functions live
+  # Backend functions location
   functions = "netlify/functions"
 
 [dev]
-  # This section is ONLY used when you run 'netlify dev' on your laptop
   command = "npm run dev"
   targetPort = 3000
   port = 8888
