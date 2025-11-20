@@ -1,4 +1,3 @@
-// src/contexts/GoogleMapsContext.tsx
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 interface GoogleMapsContextType {
@@ -11,6 +10,7 @@ const GoogleMapsContext = createContext<GoogleMapsContextType | undefined>(undef
 export const useGoogleMaps = () => {
   const context = useContext(GoogleMapsContext);
   if (!context) {
+    // This is likely the error causing your white screen
     throw new Error('useGoogleMaps must be used within a GoogleMapsProvider');
   }
   return context;
@@ -24,7 +24,7 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
-useEffect(() => {
+  useEffect(() => {
     const apiKey = import.meta.env.VITE_MAPS_API_KEY;
     
     if (!apiKey) {
@@ -38,7 +38,7 @@ useEffect(() => {
     }
 
     const script = document.createElement('script');
-    // UPDATED: Added &loading=async to the URL
+    // Added loading=async to fix the console warning
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-// Import the provider
+// Import the provider we created
 import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 
 const rootElement = document.getElementById('root');
@@ -13,6 +13,7 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
+    {/* This Provider wrapper is REQUIRED for AddressInputForm to work */}
     <GoogleMapsProvider>
       <App />
     </GoogleMapsProvider>
