@@ -34,8 +34,8 @@ export default async (request: Request, context: Context) => {
     
     // --- Server-side Validation ---
     // 1. Validate image type
-    if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:image/png;base64,')) {
-        return new Response(JSON.stringify({ error: 'Invalid image format. Expected PNG data URL.' }), { status: 400 });
+    if (typeof imageUrl !== 'string' || !imageUrl.startsWith('data:image/')) {
+        return new Response(JSON.stringify({ error: 'Invalid image format. Expected Data URL.' }), { status: 400 });
     }
 
     // 2. Validate image size (e.g., < 15MB)
