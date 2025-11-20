@@ -1,14 +1,16 @@
 // src/services/geminiService.ts
 
-// This interface is used by App.tsx
 export interface StreetViewPov {
   heading: number;
   pitch: number;
   fov: number;
 }
 
-export const fetchStreetViewImage = (address: string, pov?: StreetViewPov): { originalUrl: string } => {
-  // Vite replaces this with your VITE_MAPS_API_KEY from Netlify
+// UPDATED: Accepts string address OR LatLng object
+export const fetchStreetViewImage = (
+  location: string | google.maps.LatLng, 
+  pov?: StreetViewPov
+): { originalUrl: string } => {
   const apiKey = import.meta.env.VITE_MAPS_API_KEY;
 
   if (!apiKey) {
@@ -16,11 +18,20 @@ export const fetchStreetViewImage = (address: string, pov?: StreetViewPov): { or
     throw new Error("VITE_MAPS_API_KEY is not set.");
   }
   
-  // === UPDATED ===
-  // We now request a 1024x768 image, which is a high-res 4:3 aspect ratio.
-  let streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=1024x768&location=${encodeURIComponent(address)}&key=${apiKey}`;
+  let locationParam = '';
+  
+  if (typeof location === 'string') {
+    locationParam = `location=${encodeURIComponent(location)}`;
+  } else if (location && typeof location.lat === 'function') {
+    // Handle Google Maps LatLng object
+    locationParam = `location=${location.lat()},${location.lng()}`;
+  }
+
+  // We use 1024x768 for the 4:3 aspect ratio
+  let streetViewUrl = `https://maps.googleapis.com/maps/api/streetview?size=1024x768&${locationParam}&key=${apiKey}`;
 
   if (pov) {
+    // Ensure integers/floats are formatted correctly
     streetViewUrl += `&heading=${pov.heading}&pitch=${pov.pitch}&fov=${pov.fov}`;
   }
   

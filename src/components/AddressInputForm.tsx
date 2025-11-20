@@ -1,9 +1,11 @@
+// src/components/AddressInputForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 
 interface AddressInputFormProps {
-  onSubmit: (address: string) => void;
+  // UPDATED: Now accepts a location callback that includes coordinates
+  onSubmit: (address: string, location?: google.maps.LatLng) => void;
   isLoading: boolean;
   buttonText?: string;
   buttonIcon?: React.ReactNode;
@@ -24,9 +26,11 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
   
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  // Store the last selected place location
+  const selectedLocationRef = useRef<google.maps.LatLng | undefined>(undefined);
 
   const validateAddress = (addr: string): boolean => {
-    return addr.trim().length > 10 && addr.includes(',');
+    return addr.trim().length > 3; // Relaxed validation
   };
 
   useEffect(() => {
@@ -49,7 +53,7 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
             inputRef.current,
             {
               types: ['address'],
-              fields: ['formatted_address'],
+              fields: ['formatted_address', 'geometry'], // UPDATED: Request geometry
             }
           );
 
@@ -57,6 +61,9 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
             const place = autocompleteRef.current?.getPlace();
             if (place && place.formatted_address) {
               setAddress(place.formatted_address);
+              // UPDATED: Store the location
+              selectedLocationRef.current = place.geometry?.location;
+              
               setIsTouched(true);
               setIsValid(validateAddress(place.formatted_address));
             }
@@ -79,6 +86,8 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAddress(e.target.value);
+    // Reset location if user types manually, forcing them to select or we rely on text search later
+    selectedLocationRef.current = undefined; 
     if (isTouched) {
       setIsValid(validateAddress(e.target.value));
     }
@@ -92,11 +101,12 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
     setIsValid(finalValid);
 
     if (finalValid && !isLoading) {
-      onSubmit(address);
+      // UPDATED: Pass the location ref
+      onSubmit(address, selectedLocationRef.current);
     }
   };
   
-  // === TYPO FIXED HERE ===
+  // Fixed function name from previous error
   const handleBlur = () => {
     setIsTouched(true);
     setIsValid(validateAddress(address));
@@ -113,7 +123,7 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
           value={address}
           onChange={handleAddressChange}
           onBlur={handleBlur}
-          placeholder={isLoaded ? "My childhood home, the place we met, or your favorite monument : "Loading maps..."} 
+          placeholder={isLoaded ? "E.g., 1600 Amphitheatre Pkwy, Mountain View, CA" : "Loading maps..."} 
           className={`w-full bg-white px-4 py-3 border rounded-lg focus:ring-2 focus:border-indigo-500 transition duration-200 ${
             showError ? 'border-red-500 ring-red-500/50' : 'border-slate-300 focus:ring-indigo-500'
           }`}
@@ -124,7 +134,7 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
         
         {showError && (
           <p className="text-red-600 text-sm mt-1" role="alert">
-            Please enter a full address, e.g., Street, City, State.
+            Please enter a full address.
           </p>
         )}
       </div>
