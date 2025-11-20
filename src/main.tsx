@@ -1,8 +1,9 @@
-// src/main.tsx
-import './index.css'; 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App'; // UPDATED: Path changed from './components/App'
+import App from './App';
+import './index.css';
+// Import the provider
+import { GoogleMapsProvider } from './contexts/GoogleMapsContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -12,6 +13,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <GoogleMapsProvider>
+      <App />
+    </GoogleMapsProvider>
   </React.StrictMode>
 );
