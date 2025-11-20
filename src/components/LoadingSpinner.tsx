@@ -3,8 +3,8 @@ import React from 'react';
 import { Loader2 } from 'lucide-react'; 
 
 interface LoadingSpinnerProps {
-  mainText?: string; // UPDATED
-  subText?: string;  // NEW
+  mainText?: string; 
+  subText?: string; 
   size?: 'small' | 'medium' | 'large';
 }
 

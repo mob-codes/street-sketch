@@ -1,7 +1,6 @@
-// src/components/AddressInputForm.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
-import { useGoogleMaps } from '../contexts/GoogleMapsContext'; // <--- UPDATED: Import Hook
+import { useGoogleMaps } from '../contexts/GoogleMapsContext';
 
 interface AddressInputFormProps {
   onSubmit: (address: string) => void;
@@ -18,7 +17,7 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
   buttonIcon = <Sparkles className="w-5 h-5 mr-2" />,
   initialValue = '' 
 }) => {
-  const { isLoaded } = useGoogleMaps(); // <--- UPDATED: Get loaded state
+  const { isLoaded } = useGoogleMaps();
   const [address, setAddress] = useState<string>(initialValue); 
   const [isValid, setIsValid] = useState<boolean>(false);
   const [isTouched, setIsTouched] = useState<boolean>(false);
@@ -35,8 +34,7 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
   }, [initialValue]);
   
   useEffect(() => {
-    // 1. Check if the input ref is ready AND Google Maps is loaded
-    if (!inputRef.current || !isLoaded) { // <--- UPDATED: Check isLoaded
+    if (!inputRef.current || !isLoaded) {
       return;
     }
     
@@ -45,7 +43,6 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
         if (window.google && window.google.maps) {
           const { Autocomplete } = await google.maps.importLibrary("places") as google.maps.PlacesLibrary;
 
-          // Prevent multiple instances
           if (autocompleteRef.current) return; 
 
           autocompleteRef.current = new Autocomplete(
@@ -75,10 +72,9 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
     return () => {
       if (autocompleteRef.current) {
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
-        // Note: Google Maps instances don't strictly need "destruction", but clearing listeners is good practice
       }
     };
-  }, [isLoading, isLoaded]); // <--- UPDATED: Add isLoaded to dependency array
+  }, [isLoading, isLoaded]);
 
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -100,7 +96,8 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
     }
   };
   
-  constSX_handleBlur = () => {
+  // === TYPO FIXED HERE ===
+  const handleBlur = () => {
     setIsTouched(true);
     setIsValid(validateAddress(address));
   };
@@ -116,11 +113,11 @@ const AddressInputForm: React.FC<AddressInputFormProps> = ({
           value={address}
           onChange={handleAddressChange}
           onBlur={handleBlur}
-          placeholder={isLoaded ? "E.g., 1600 Amphitheatre Pkwy, Mountain View, CA" : "Loading maps..."} 
+          placeholder={isLoaded ? "My childhood home, the place we met, or your favorite monument : "Loading maps..."} 
           className={`w-full bg-white px-4 py-3 border rounded-lg focus:ring-2 focus:border-indigo-500 transition duration-200 ${
             showError ? 'border-red-500 ring-red-500/50' : 'border-slate-300 focus:ring-indigo-500'
           }`}
-          disabled={isLoading || !isLoaded} // <--- UPDATED: Disable while map loads
+          disabled={isLoading || !isLoaded}
           aria-invalid={showError}
           autoComplete="off"
         />

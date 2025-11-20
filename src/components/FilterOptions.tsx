@@ -1,7 +1,6 @@
 // components/FilterOptions.tsx
 import React from 'react';
 
-// UPDATED: Using your new .webp files and removed Digital Illustration
 const ART_STYLES = [
     {
         name: 'Watercolor',
@@ -27,11 +26,9 @@ const FilterOptions: React.FC<FilterOptionsProps> = ({ selectedStyle, onStyleCha
   return (
     <div className="pt-6 mt-6 border-t border-slate-200">
       <h3 className="text-md font-semibold text-center text-slate-600 mb-4">Choose your style</h3>
-      {/* UPDATED: Now a 3-column grid */}
       <div className="grid grid-cols-3 gap-4">
         {ART_STYLES.map((style) => (
           <div key={style.name} className="flex flex-col items-center gap-2 text-center">
-            {/* UPDATED: Now an <img> tag */}
             <button
               type="button"
               onClick={() => onStyleChange(style.name)}
