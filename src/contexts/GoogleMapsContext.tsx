@@ -24,7 +24,7 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
 
-  useEffect(() => {
+useEffect(() => {
     const apiKey = import.meta.env.VITE_MAPS_API_KEY;
     
     if (!apiKey) {
@@ -38,7 +38,8 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
     }
 
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    // UPDATED: Added &loading=async to the URL
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async`;
     script.async = true;
     script.defer = true;
     
@@ -48,7 +49,6 @@ export const GoogleMapsProvider: React.FC<GoogleMapsProviderProps> = ({ children
     document.body.appendChild(script);
 
     return () => {
-      // Cleanup if necessary
       document.body.removeChild(script);
     };
   }, []);
